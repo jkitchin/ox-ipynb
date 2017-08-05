@@ -6,7 +6,7 @@
 ;; URL: https://github.com/jkitchin/ox-ipynb/ox-ipynb.el
 ;; Version: 0.1
 ;; Keywords: org-mode
-;; Package-Requires: ((org "8.2"))
+;; Package-Requires: ((emacs "25") (org "8.2"))
 
 ;; This file is not currently part of GNU Emacs.
 
@@ -78,7 +78,7 @@ They are reverse-engineered from existing notebooks.")
 
 
 
-(defun export-ipynb-code-cell (src-result)
+(defun ox-ipynb-export-code-cell (src-result)
   "Return a lisp code cell for the org-element SRC-BLOCK."
   (let* ((src-block (car src-result))
          (results-end (cdr src-result))
@@ -198,7 +198,7 @@ This only fixes file links with no description I think."
     text))
 
 
-(defun export-ipynb-markdown-cell (s)
+(defun ox-ipynb-export-markdown-cell (s)
   "Return the markdown cell for the string S."
   (let* ((org-export-filter-latex-fragment-functions '(ox-ipynb-filter-latex-fragment))
          (org-export-filter-link-functions '(ox-ipynb-filter-link))
@@ -218,7 +218,7 @@ This only fixes file links with no description I think."
       nil)))
 
 
-(defun export-ipynb-keyword-cell ()
+(defun ox-ipynb-export-keyword-cell ()
   "Make a markdown cell containing org-file keywords and values."
   (let* ((all-keywords (org-element-map (org-element-parse-buffer)
                            'keyword
@@ -326,7 +326,7 @@ nil:END:"  nil t)
 
 
   ;; Now we parse the buffer.
-  (let* ((cells (if (export-ipynb-keyword-cell) (list (export-ipynb-keyword-cell)) '()))
+  (let* ((cells (if (ox-ipynb-export-keyword-cell) (list (ox-ipynb-export-keyword-cell)) '()))
          (ox-ipynb-language (ox-ipynb-get-language))
          (metadata `(metadata . ((org . ,(let* ((all-keywords (org-element-map (org-element-parse-buffer)
                                                                   'keyword
@@ -407,7 +407,7 @@ nil:END:"  nil t)
             (loop for s in (ox-ipynb-split-text text)
                   unless (string= "" (s-trim s))
                   do
-                  (when-let ((md (export-ipynb-markdown-cell s)))
+                  (when-let ((md (ox-ipynb-export-markdown-cell s)))
                     (push md cells)))))
       ;; this is a special case where there are no source blocks, and the whole
       ;; document is a markdown cell.
@@ -415,12 +415,12 @@ nil:END:"  nil t)
         (loop for s in (ox-ipynb-split-text text)
               unless (string= "" (s-trim s))
               do
-              (when-let ((md (export-ipynb-markdown-cell s)))
+              (when-let ((md (ox-ipynb-export-markdown-cell s)))
                 (push md cells)))))
 
     (while current-source
       ;; add the src cell
-      (push (export-ipynb-code-cell current-source) cells)
+      (push (ox-ipynb-export-code-cell current-source) cells)
       (setq result-end (cdr current-source)
             result (car result-end)
             result-end (cdr result-end))
@@ -443,14 +443,14 @@ nil:END:"  nil t)
               (loop for s in (ox-ipynb-split-text text)
                     unless (string= "" s)
                     do
-                    (when-let ((md (export-ipynb-markdown-cell (s-trim s))))
+                    (when-let ((md (ox-ipynb-export-markdown-cell (s-trim s))))
                       (push md cells)))))
         ;; on last block so add rest of document
         (let ((text (buffer-substring-no-properties end (point-max))))
           (loop for s in (ox-ipynb-split-text text)
                 unless (string= "" s)
                 do
-                (when-let ((md (export-ipynb-markdown-cell (s-trim s))))
+                (when-let ((md (ox-ipynb-export-markdown-cell (s-trim s))))
                   (push md cells))))))
 
     (setq data (append
@@ -469,7 +469,7 @@ nil:END:"  nil t)
     (get-buffer "*ox-ipynb*")))
 
 
-(defun nbopen (fname)
+(defun ox-ipynb-nbopen (fname)
   "Open fname in jupyter notebook."
   (interactive  (list (read-file-name "Notebook: ")))
   (shell-command (format "nbopen \"%s\" &" fname)))
