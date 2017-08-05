@@ -1,0 +1,112 @@
+#+TITLE: Example of org to ipynb
+#+AUTHOR: John Kitchin
+
+#+ox-ipynb-keyword-metadata: key1 key2
+
+* Introduction
+
+I wrote this module to allow me to write lecture notes in org-mode, but export them to ipython notebooks for my students. To use this, you have to require the ox-ipynb library. Then you can export this file with the key sequence =C-c C-e n o= to create the ipynb and open it.
+
+In the following sections I will demonstrate a few features.
+
+** Embed equations
+
+You can use LaTeX equations like: $\int_0^1 \sin x dx$.
+
+** Embed code and results
+
+Note that code blocks must be either "ipython" or "R", and the first one determines the language used for all of the code blocks.
+
+#+BEGIN_SRC ipython 
+import numpy as np
+from scipy.integrate import quad
+
+print(quad(lambda x: np.sin(x), 0, 1))
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+(0.45969769413186023, 5.103669643922839e-15)
+
+:END:
+
+
+Here we force a new cell to be created with the =ipynb-newcell= directive.
+#+ipynb-newcell
+
+This text should be in its own cell.
+
+** Embed tables
+
+You can create tables and they render nicely in the notebook. Note that you probably should not use the tables as data sources to code blocks because the ipython notebook does not support that.
+
+#+caption: A table of numbers.
+| x | y |
+|---+---|
+| 1 | 1 |
+| 2 | 4 |
+| 3 | 9 |
+
+
+** Use ipython magic to get inline figures
+
+#+BEGIN_SRC ipython
+%matplotlib inline
+import matplotlib.pyplot as plt
+
+z = np.linspace(0, 20 * np.pi, 500)
+x = np.sin(z) * np.exp(-0.1 * z)
+y = np.cos(z) * np.exp(-0.1 * z)
+plt.plot(x, y)
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+
+[<matplotlib.lines.Line2D at 0x11a2ef6a0>]
+<matplotlib.figure.Figure at 0x11a22b588>
+[[file:ipython-inline-images/ob-ipython-3463501494cf7e34b4ab1216c3e45e82.png]]
+:END:
+
+** Store metadata in the ipynb
+
+The directive =ox-ipynb-keyword-metadata= lists file variables that should be saved as metadata in the ipynb.
+
+#+key1: value1
+#+key2: value2
+
+We can set values as file variables like this: 
+
+
+#+attr_org: :width 300
+[[./screenshots/date-05-08-2017-time-08-55-41.png]]
+
+On export, you can see these are stored in the metadata as:
+
+
+
+#+attr_org: :width 300
+[[./screenshots/date-05-08-2017-time-08-56-35.png]]
+
+These will show as bullets at the top of the ipynb. These are machine readable, so you can access them with any tool that can read json. You can use this to store author names, document id's, etc.
+
+#+BEGIN_SRC ipython
+import json
+
+with open("example.ipynb") as f:
+    d = json.loads(f.read())
+
+print(d['metadata']['org'])
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+{'KEY1': 'value1', 'KEY2': 'value2'}
+
+:END:
+
+** Use HTML
+
+ <div class="alert alert-warning">
+You can use an alert to highlight something you want to stand out.
+ </div>
