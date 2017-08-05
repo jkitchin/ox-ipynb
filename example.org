@@ -5,9 +5,29 @@
 
 * Introduction
 
-I wrote this module to allow me to write lecture notes in org-mode, but export them to ipython notebooks for my students. To use this, you have to require the ox-ipynb library. Then you can export this file with the key sequence =C-c C-e n o= to create the ipynb and open it.
+I wrote this module to allow me to write lecture notes in org-mode, but export them to ipython notebooks for my students. It also makes it easier to share my work with people who don't use org-mode (although it is a one-way conversion of org to ipynb).
+
+To use this, you have to require the ox-ipynb library. Then you can export this file with the key sequence =C-c C-e n o= to create the ipynb and open it.
 
 In the following sections I will demonstrate a few features.
+
+** Org-mode markup
+   :PROPERTIES:
+   :ID:       78E6E264-C6C3-46B8-80D8-05A236497755
+   :END:
+
+You should get all the regular markup:
+
+- *bold text*
+- /italics/
+- _underlined_
+- +strikethrough+
+- =verbatim=
+- ~code~
+- superscripts, e.g. H^+
+- subscripts, e.g. CH_{4}
+- hyperlinks: http://github.com/jkitchin/ox-ipynb
+- internal links do not work: [[id:78E6E264-C6C3-46B8-80D8-05A236497755][Org-mode markup]] 
 
 ** Embed equations
 
@@ -105,8 +125,13 @@ print(d['metadata']['org'])
 
 :END:
 
-** Use HTML
+** Use HTML for fancy markup
+
+You can use html tags directly in the org file. Here are two examples.
 
  <div class="alert alert-warning">
 You can use an alert to highlight something you want to stand out.
  </div>
+
+<font color="blue">This text will show up as blue.</font>
+
