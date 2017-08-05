@@ -55,7 +55,7 @@
                                (R . (kernelspec . ((display_name . "R")
                                                    (language . "R")
                                                    (name . "ir")))))
-  "kernelspec metadata for different kernels.")
+  "Kernelspec metadata for different kernels.")
 
 
 (defvar ox-ipynb-language-infos
@@ -77,9 +77,9 @@
 They are reverse-engineered from existing notebooks.")
 
 
-
 (defun ox-ipynb-export-code-cell (src-result)
-  "Return a lisp code cell for the org-element SRC-BLOCK."
+  "Return a code cell for the org-element in the car of SRC-RESULT.
+The cdr of SRC-RESULT is the end position of the results."
   (let* ((src-block (car src-result))
          (results-end (cdr src-result))
          (results (org-no-properties (car results-end)))
@@ -176,8 +176,8 @@ They are reverse-engineered from existing notebooks.")
                   (list (s-trim (car (org-export-unravel-code src-block)))))))))
 
 
-(defun ox-ipynb-filter-latex-fragment (text back-end info)
-  "Export org latex fragments for ipynb markdown.
+(defun ox-ipynb-filter-latex-fragment (text _ _)
+  "Export org latex fragments in TEXT for ipynb markdown.
 Latex fragments come from org as \(fragment\) for inline math or
 \[fragment\] for displayed math. Convert to $fragment$
 or $$fragment$$ for ipynb."
@@ -188,8 +188,8 @@ or $$fragment$$ for ipynb."
   (replace-regexp-in-string "\\\\(\\|\\\\)" "$" text))
 
 
-(defun ox-ipynb-filter-link (text back-end info)
-  "Make a link into markdown.
+(defun ox-ipynb-filter-link (text _ _)
+  "Make a link in TEXT into markdown.
 For some reason I was getting angle brackets in them I wanted to remove.
 This only fixes file links with no description I think."
   (if (s-starts-with? "<" text)
@@ -470,7 +470,7 @@ nil:END:"  nil t)
 
 
 (defun ox-ipynb-nbopen (fname)
-  "Open fname in jupyter notebook."
+  "Open FNAME in jupyter notebook."
   (interactive  (list (read-file-name "Notebook: ")))
   (shell-command (format "nbopen \"%s\" &" fname)))
 
@@ -478,6 +478,12 @@ nil:END:"  nil t)
 ;; * export menu
 (defun ox-ipynb-export-to-ipynb-buffer (&optional async subtreep visible-only
                                                   body-only info)
+  "Export the current buffer to an ipynb in a new buffer.
+Optional argument ASYNC to asynchronously export.
+Optional argument SUBTREEP to export current subtree.
+Optional argument VISIBLE-ONLY to only export visible content.
+Optional argument BODY-ONLY export only the body.
+Optional argument INFO is a plist of options."
   (let ((ipynb (or (when (boundp 'export-file-name) export-file-name)
                    (concat (file-name-base (buffer-file-name)) ".ipynb")))
         buf)
@@ -494,6 +500,12 @@ nil:END:"  nil t)
 
 
 (defun ox-ipynb-export-to-ipynb-file (&optional async subtreep visible-only body-only info)
+  "Export current buffer to a file.
+Optional argument ASYNC to asynchronously export.
+Optional argument SUBTREEP to export current subtree.
+Optional argument VISIBLE-ONLY to only export visible content.
+Optional argument BODY-ONLY export only the body.
+Optional argument INFO is a plist of options."
   (with-current-buffer (ox-ipynb-export-to-ipynb-buffer async subtreep visible-only body-only info)
     (let* ((efn export-file-name)
            (buf (find-file-noselect efn) ))
@@ -505,6 +517,12 @@ nil:END:"  nil t)
 
 
 (defun ox-ipynb-export-to-ipynb-file-and-open (&optional async subtreep visible-only body-only info)
+  "Export current buffer to a file and open it.
+Optional argument ASYNC to asynchronously export.
+Optional argument SUBTREEP to export current subtree.
+Optional argument VISIBLE-ONLY to only export visible content.
+Optional argument BODY-ONLY export only the body.
+Optional argument INFO is a plist of options."
   (let* ((async-shell-command-buffer 'confirm-kill-buffer)
          (fname (expand-file-name
                  (ox-ipynb-export-to-ipynb-file async subtreep visible-only body-only info))))
