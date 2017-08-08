@@ -54,7 +54,10 @@
                                                          (name . "python3"))))
                                (R . (kernelspec . ((display_name . "R")
                                                    (language . "R")
-                                                   (name . "ir")))))
+                                                   (name . "ir"))))
+                               (julia . (kernelspec . ((display_name . "Julia 0.6.0")
+                                           (language . "julia")
+                                           (name . "julia-0.6")))))
   "Kernelspec metadata for different kernels.")
 
 
@@ -72,7 +75,13 @@
                            (mimetype . "text/x-r-source")
                            (name . "R")
                            (pygments_lexer . "r")
-                           (version . "3.3.2")))))
+                           (version . "3.3.2"))))
+    (julia . (language_info . ((codemirror_mode . "julia")
+                               (file_extension . ".jl")
+                               (mimetype . "text/x-julia")
+                               (name . "julia")
+                               (pygments_lexer . "julia")
+                               (version . "0.6.0")))))
   "These get injected into notebook metadata.
 They are reverse-engineered from existing notebooks.")
 
