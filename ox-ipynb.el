@@ -111,11 +111,12 @@ The cdr of SRC-RESULT is the end position of the results."
                          (buffer-string))
                        'binary)
                       t))
-      (add-to-list 'output-cells `((data . ((image/png . ,img-data)
-                                            ("text/plain" . "<matplotlib.figure.Figure>")))
-                                   (metadata . ,(make-hash-table))
-                                   (output_type . "display_data"))
-                   t))
+      (setq output-cells
+	    (append output-cells
+		    `((data . ((image/png . ,img-data)
+			       ("text/plain" . "<matplotlib.figure.Figure>")))
+		      (metadata . ,(make-hash-table))
+		      (output_type . "display_data")))))
     ;; now remove the inline images and put the results in.
     (setq results (s-trim (replace-regexp-in-string "\\[\\[file:\\(.*?\\)\\]\\]" ""
                                                     (or results ""))))
@@ -137,11 +138,11 @@ The cdr of SRC-RESULT is the end position of the results."
       (setq results (concat (substring results 0 block-start)
                             (substring results block-end)))
       (message "html: %s\nresults: %s" html results)
-      (add-to-list 'output-cells `((data . ((text/html . ,html)
-                                            ("text/plain" . "HTML object")))
-                                   (metadata . ,(make-hash-table))
-                                   (output_type . "display_data"))
-                   t))
+      (add-to-list output-cells (append
+				 output-cells `((data . ((text/html . ,html)
+							 ("text/plain" . "HTML object")))
+						(metadata . ,(make-hash-table))
+						(output_type . "display_data")))))
 
     ;; Handle latex cells
     (when (string-match "#\\+BEGIN_EXPORT latex" (or results ""))
@@ -158,11 +159,12 @@ The cdr of SRC-RESULT is the end position of the results."
       (setq results (concat (substring results 0 block-start)
                             (substring results block-end)))
 
-      (add-to-list 'output-cells `((data . ((text/latex . ,latex)
-                                            ("text/plain" . "Latex object")))
-                                   (metadata . ,(make-hash-table))
-                                   (output_type . "display_data"))
-                   t))
+      (setq output-cells (append
+			  output-cells
+			  `((data . ((text/latex . ,latex)
+				     ("text/plain" . "Latex object")))
+			    (metadata . ,(make-hash-table))
+			    (output_type . "display_data")))))
 
     ;; output cells
     (unless (string= "" results)
