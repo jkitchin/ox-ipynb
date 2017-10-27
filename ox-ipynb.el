@@ -56,8 +56,8 @@
                                                    (language . "R")
                                                    (name . "ir"))))
                                (julia . (kernelspec . ((display_name . "Julia 0.6.0")
-                                           (language . "julia")
-                                           (name . "julia-0.6")))))
+						       (language . "julia")
+						       (name . "julia-0.6")))))
   "Kernelspec metadata for different kernels.")
 
 
@@ -138,11 +138,11 @@ The cdr of SRC-RESULT is the end position of the results."
       (setq results (concat (substring results 0 block-start)
                             (substring results block-end)))
       (message "html: %s\nresults: %s" html results)
-      (add-to-list output-cells (append
-				 output-cells `((data . ((text/html . ,html)
-							 ("text/plain" . "HTML object")))
-						(metadata . ,(make-hash-table))
-						(output_type . "display_data")))))
+      (setq output-cells (append
+			  output-cells `((data . ((text/html . ,html)
+						  ("text/plain" . "HTML object")))
+					 (metadata . ,(make-hash-table))
+					 (output_type . "display_data")))))
 
     ;; Handle latex cells
     (when (string-match "#\\+BEGIN_EXPORT latex" (or results ""))
