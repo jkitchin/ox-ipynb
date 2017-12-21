@@ -96,6 +96,8 @@ The cdr of SRC-RESULT is the end position of the results."
          img-path img-data
          (start 0)
          end
+	 (src-metadata (or (org-export-read-attribute :attr_ipynb src-block)
+			   (make-hash-table)))
          block-start block-end
          html
          latex)
@@ -177,7 +179,7 @@ The cdr of SRC-RESULT is the end position of the results."
     `((cell_type . "code")
       (execution_count . 1)
       ;; the hashtable trick converts to {} in json. jupyter can't take a null here.
-      (metadata . ,(make-hash-table))
+      (metadata . ,src-metadata)
       (outputs . ,(if (null output-cells)
                       ;; (vector) json-encodes to  [], not null which
                       ;; jupyter does not like.
@@ -497,17 +499,17 @@ Optional argument BODY-ONLY export only the body.
 Optional argument INFO is a plist of options."
   (let ((ipynb (or (when (boundp 'export-file-name) export-file-name)
                    (concat (file-name-base (buffer-file-name)) ".ipynb")))
+	(content (buffer-string))
         buf)
-    (org-org-export-as-org async subtreep visible-only body-only info)
-    (with-current-buffer "*Org ORG Export*"
+    ;; (org-org-export-as-org async subtreep visible-only body-only info)
+    (with-temp-buffer
+      (insert content)
+      (org-mode)
       (setq-local export-file-name ipynb)
-
       (setq buf (ox-ipynb-export-to-buffer))
       (with-current-buffer buf
         (setq-local export-file-name ipynb))
-      (prog1
-          buf
-        (kill-buffer "*Org ORG Export*")))))
+      buf)))
 
 
 (defun ox-ipynb-export-to-ipynb-file (&optional async subtreep visible-only body-only info)
