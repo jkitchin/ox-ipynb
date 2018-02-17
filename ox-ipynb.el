@@ -111,12 +111,13 @@ The cdr of SRC-RESULT is the end position of the results."
                          (buffer-string))
                        'binary)
                       t))
+
       (setq output-cells
 	    (append output-cells
-		    `((data . ((image/png . ,img-data)
-			       ("text/plain" . "<matplotlib.figure.Figure>")))
-		      (metadata . ,(make-hash-table))
-		      (output_type . "display_data")))))
+		    `(((data . ((image/png . ,img-data)
+				("text/plain" . "<matplotlib.figure.Figure>")))
+		       (metadata . ,(make-hash-table))
+		       (output_type . "display_data"))))))
     ;; now remove the inline images and put the results in.
     (setq results (s-trim (replace-regexp-in-string "\\[\\[file:\\(.*?\\)\\]\\]" ""
                                                     (or results ""))))
@@ -241,7 +242,7 @@ This only fixes file links with no description I think."
          (keywords (loop for key in include-keywords
                          if (assoc key all-keywords)
                          collect (cons key (or (cdr (assoc key all-keywords)) "")))))
-    
+
     (setq keywords
           (loop for (key . value) in keywords
                 collect
@@ -288,10 +289,8 @@ Empty strings are eliminated."
     s3))
 
 
-(defun ox-ipynb-export-to-buffer ()
-  "Export the current buffer to ipynb format in a buffer.
-Only ipython source blocks are exported as code cells. Everything
-else is exported as a markdown cell. The output is in *ox-ipynb*."
+(defun ox-ipynb-export-to-buffer-data ()
+
 
   ;; This is a hack to remove empty Results. I think this is a bug in org-mode,
   ;; that it exports empty results to have a nil in them without a \n, which
@@ -470,7 +469,18 @@ nil:END:"  nil t)
                 '((nbformat . 4)
                   (nbformat_minor . 0))))
 
-    ;; Put the json into a buffer
+    data))
+
+
+(defun ox-ipynb-export-to-buffer ()
+  "Export the current buffer to ipynb format in a buffer.
+Only ipython source blocks are exported as code cells. Everything
+else is exported as a markdown cell. The output is in *ox-ipynb*."
+  (interactive)
+  ;; Put the json into a buffer
+  (let ((data (ox-ipynb-export-to-buffer-data))
+	(ipynb (or (and (boundp 'export-file-name) export-file-name)
+		   (concat (file-name-base (buffer-file-name)) ".ipynb"))))
     (with-current-buffer (get-buffer-create "*ox-ipynb*")
       (erase-buffer)
       (insert (json-encode data)))
@@ -478,7 +488,6 @@ nil:END:"  nil t)
     (switch-to-buffer "*ox-ipynb*")
     (setq-local export-file-name ipynb)
     (get-buffer "*ox-ipynb*")))
-
 
 (defun ox-ipynb-nbopen (fname)
   "Open FNAME in jupyter notebook."
