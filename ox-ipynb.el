@@ -511,12 +511,48 @@ Optional argument INFO is a plist of options."
     (with-current-buffer "*Org ORG Export*"
       (setq-local export-file-name ipynb)
 
-      (setq buf (ox-ipynb-export-to-buffer))
-      (with-current-buffer buf
-        (setq-local export-file-name ipynb))
-      (prog1
-          buf
-        (kill-buffer "*Org ORG Export*")))))
+      ;; Reminder to self. This is not a regular kind of exporter. We have to
+      ;; build up the json document that represents a notebook, so some things
+      ;; don't work like a regular exporter that has access to the whole data
+      ;; structure for resolving links. We have to handle org-ref separately. At
+      ;; this point, they are no longer org-ref links, and have been converted
+      ;; to custom-id links. They don't render because they are turned to md as
+      ;; isolated strings.
+      (let ((links (loop for link in (org-element-map
+					 (org-element-parse-buffer) 'link 'identity)
+			 if (string= "custom-id" (org-element-property :type link)) 
+			 collect link)))
+	(loop for link in (reverse links)
+	      do
+	      (setf (buffer-substring (org-element-property :begin link)
+				      (org-element-property :end link))
+		    (format "[%s]" (org-element-property :path link)))))
+      ;; The bibliography also leaves something to be desired. It gets turned
+      ;; into an org-bibtex set of headings. Here we convert these to something
+      ;; just slightly more palatable.
+      (let ((bib-entries (loop for hl in (org-element-map
+					     (org-element-parse-buffer) 'headline 'identity)
+			       if (org-element-property :=KEY= hl)
+			       collect hl)))
+	(loop for hl in (reverse bib-entries)
+	      do
+	      (setf (buffer-substring (org-element-property :begin hl)
+				      (org-element-property :end hl))
+		    (s-format "[${=KEY=}] ${AUTHOR}. ${TITLE}. https://dx.doi.org/${DOI}\n\n"
+			      (lambda (arg &optional extra)
+				(let ((entry (org-element-property (intern-soft (concat ":"arg)) hl)))
+				  (substring
+				   entry
+				   (if (s-starts-with? "{" entry) 1 0)
+				   (if (s-ends-with? "}" entry) -1 nil)))))))))
+    
+
+    (setq buf (ox-ipynb-export-to-buffer))
+    (with-current-buffer buf
+      (setq-local export-file-name ipynb))
+    (prog1
+	buf
+      (kill-buffer "*Org ORG Export*"))))))
 
 
 (defun ox-ipynb-export-to-ipynb-file (&optional async subtreep visible-only body-only info)
