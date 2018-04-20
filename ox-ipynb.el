@@ -520,7 +520,7 @@ Optional argument INFO is a plist of options."
       ;; isolated strings.
       (let ((links (loop for link in (org-element-map
 					 (org-element-parse-buffer) 'link 'identity)
-			 if (string= "custom-id" (org-element-property :type link)) 
+			 if (string= "custom-id" (org-element-property :type link))
 			 collect link)))
 	(loop for link in (reverse links)
 	      do
@@ -545,14 +545,14 @@ Optional argument INFO is a plist of options."
 				   entry
 				   (if (s-starts-with? "{" entry) 1 0)
 				   (if (s-ends-with? "}" entry) -1 nil)))))))))
-    
+
 
     (setq buf (ox-ipynb-export-to-buffer))
     (with-current-buffer buf
       (setq-local export-file-name ipynb))
     (prog1
 	buf
-      (kill-buffer "*Org ORG Export*"))))))
+      (kill-buffer "*Org ORG Export*"))))
 
 
 (defun ox-ipynb-export-to-ipynb-file (&optional async subtreep visible-only body-only info)
