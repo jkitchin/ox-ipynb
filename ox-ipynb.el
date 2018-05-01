@@ -504,8 +504,10 @@ Optional argument SUBTREEP to export current subtree.
 Optional argument VISIBLE-ONLY to only export visible content.
 Optional argument BODY-ONLY export only the body.
 Optional argument INFO is a plist of options."
-  (let ((ipynb (or (when (boundp 'export-file-name) export-file-name)
-                   (concat (file-name-base (buffer-file-name)) ".ipynb")))
+  (let ((ipynb (or
+		(org-entry-get nil "EXPORT_FILE_NAME")
+		(when (boundp 'export-file-name) export-file-name)
+		(concat (file-name-base (buffer-file-name)) ".ipynb")))
         buf)
     (org-org-export-as-org async subtreep visible-only body-only info)
     (with-current-buffer "*Org ORG Export*"
