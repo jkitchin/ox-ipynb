@@ -6,7 +6,7 @@
 ;; URL: https://github.com/jkitchin/ox-ipynb/ox-ipynb.el
 ;; Version: 0.1
 ;; Keywords: org-mode
-;; Package-Requires: ((emacs "25") (org "8.2"))
+;; Package-Requires: ((emacs "25") (org "8.2") (s "1.10.0"))
 
 ;; This file is not currently part of GNU Emacs.
 
@@ -47,6 +47,8 @@
 (require 'cl)
 (require 'ox-md)
 (require 'ox-org)
+(require 's)
+(require 'json)
 
 
 (defvar ox-ipynb-kernelspecs '((ipython . (kernelspec . ((display_name . "Python 3")
