@@ -299,7 +299,7 @@ Empty strings are eliminated."
   ;; causes this exporter to fail to find them.
   (save-excursion
     (goto-char (point-min))
-    (while (re-search-forward "#\\+RESULTS:
+    (while (re-search-forward "#\\+RESULTS:\s+
 :RESULTS:
 nil:END:"  nil t)
       (replace-match "")))
