@@ -100,7 +100,8 @@ The cdr of SRC-RESULT is the end position of the results."
          end
          block-start block-end
          html
-         latex)
+         latex
+	 md)
 
     ;; Handle inline images first
     (while (string-match "\\[\\[file:\\(.*?\\)\\]\\]" (or results "") start)
@@ -261,14 +262,21 @@ This only fixes file links with no description I think."
 
 (defun ox-ipynb-get-language ()
   "Get the language for the exporter.
-We assume the first code-block contains the language you want.
-Python is the default."
-  (intern (or (org-element-map (org-element-parse-buffer)
-                  'src-block
-                (lambda (src)
-                  (org-element-property :language src))
-                nil t)
-              "ipython")))
+If you set OX-IPYNB-LANGUAGE it will be used, otherwise we assume
+the first code-block contains the language you want. If none of
+those exist, default to ipython."
+  (intern (or
+	   (cdr (assoc "OX-IPYNB-LANGUAGE" (org-element-map (org-element-parse-buffer)
+					       'keyword
+					     (lambda (key)
+					       (cons (org-element-property :key key)
+						     (org-element-property :value key))))))
+	   (org-element-map (org-element-parse-buffer)
+	       'src-block
+	     (lambda (src)
+	       (org-element-property :language src))
+	     nil t)
+	   "ipython")))
 
 
 (defun ox-ipynb-split-text (s)
