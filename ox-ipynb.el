@@ -213,6 +213,48 @@ This only fixes file links with no description I think."
     text))
 
 
+(defvar ox-ipynb-images '()
+  "alist of paths and b64 encoded data for inline images.")
+
+;; This is an org-link to get inlined images from the file system. This makes
+;; the notebook bigger, but more portable.
+(org-link-set-parameters "image"
+			 :export (lambda (path desc backend)
+				   (cond
+				    ((eq 'md backend)
+				     (let* ((fname (file-name-nondirectory path))
+					    (img-data (base64-encode-string
+						       (encode-coding-string
+							(with-temp-buffer
+							  (insert-file-contents path)
+							  (buffer-string))
+							'binary)
+						       t)))
+				       ;; save data for constructing cells
+				       ;; later. Obviously this is going to be a
+				       ;; problem if you have images with
+				       ;; different paths and the same name.
+				       ;; That seems to also be a problem in the
+				       ;; notebook though.
+				       (push (cons fname img-data) ox-ipynb-images)
+				       (format "![%s](attachment:%s)" (or desc fname) fname)))))
+
+			 ;; This puts overlays on top of the links. You can remove the overlays with C-c C-x C-v
+			 :activate-func (lambda (start end path bracketp)
+					  (when (and (file-exists-p path))
+					    (let ((img (create-image (expand-file-name path)
+								     'imagemagick nil :width 300))
+						  (ov (make-overlay start end)))
+					      (overlay-put ov 'display img)
+					      (overlay-put ov 'org-image-overlay t)
+					      (overlay-put ov 'modification-hooks (list 'org-display-inline-remove-overlay))
+					      (push ov org-inline-image-overlays)))))
+
+;; This re-fontifies any image links when you toggle the inline images.
+(advice-add 'org-display-inline-images :after 'font-lock-fontify-buffer)
+
+
+
 (defun ox-ipynb-export-markdown-cell (s)
   "Return the markdown cell for the string S."
   (let* ((org-export-filter-latex-fragment-functions '(ox-ipynb-filter-latex-fragment))
@@ -224,12 +266,26 @@ This only fixes file links with no description I think."
                         (lambda (headline info) (org-element-property :level headline))))
                (org-export-string-as
                 s
-                'md t '(:with-toc nil :with-tags nil)))))
+                'md t '(:with-toc nil :with-tags nil))))
+	 (pos 0)
+	 (attachments '()))
+    ;; we need to do some work to make images inlined for portability.
+    (while (setq pos (string-match "(attachment:\\(.*\\))" md (+ 1 pos)))
+      (push  (list (match-string 1 md)
+		   (list "image/png" (cdr (assoc (match-string 1 md) ox-ipynb-images))))
+	     attachments))
+
     (if (not (string= "" (s-trim md)))
-        `((cell_type . "markdown")
-          (metadata . ,(make-hash-table))
-          (source . ,(vconcat
-                      (list md))))
+	(if attachments
+	    `((attachments . ,attachments)
+	      (cell_type . "markdown")
+	      (metadata . ,(make-hash-table))
+	      (source . ,(vconcat
+			  (list md))))
+	  `((cell_type . "markdown")
+	    (metadata . ,(make-hash-table))
+	    (source . ,(vconcat
+			(list md)))))
       nil)))
 
 
