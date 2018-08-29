@@ -263,7 +263,14 @@ This only fixes file links with no description I think."
          ;; I overwrite the org function here because it does not give the right
          ;; levels otherwise. This one outputs exactly the level that is listed.
          (md (cl-letf (((symbol-function 'org-export-get-relative-level)
-                        (lambda (headline info) (org-element-property :level headline))))
+                        (lambda (headline info) (org-element-property :level headline)))
+
+		       ((symbol-function 'org-html-table-cell) (lambda (table-cell contents info)
+								 (s-concat  (org-trim (or contents "")) "|")))
+		       ((symbol-function 'org-html-table-row) (lambda (table-cell contents info)
+								(s-concat "|" (org-trim (or contents "---")))))
+		       ((symbol-function 'org-html-table) (lambda (table-cell contents info)
+							    (replace-regexp-in-string "\n\n" "\n" (or contents "")))))
                (org-export-string-as
                 s
                 'md t '(:with-toc nil :with-tags nil))))
