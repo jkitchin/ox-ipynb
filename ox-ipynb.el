@@ -276,7 +276,7 @@ This only fixes file links with no description I think."
 								  (concat "| " contents))
 								 ;; I think this is what the rule/horizontal lines are
 								 (t
-								  (concat "|---" (loop for i to (- ncolumns 1) concat "|--") "|")))))
+								  (concat "|---" (loop for i to (- ncolumns 1) concat "|---") "|")))))
 		       ((symbol-function 'org-html-table) (lambda (table-cell contents info)
 							    (replace-regexp-in-string "\n\n" "\n" (or contents "")))))
                (org-export-string-as
