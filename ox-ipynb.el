@@ -31,6 +31,11 @@
 ;; This will use store key:value pairs in
 ;; the notebook metadata section, in an org section.
 ;;
+;; It is also possible to set cell metadata on src-block cells. You use an
+;; attribute like #+ATTR_IPYNB: :key1 val1 :key2 val2 to set the cell metadata.
+;; You can also do this on paragraphs. Only one attr_ipynb line is supported, so
+;; all metadata needs to go in that line.
+;;
 ;; You can force a new cell to be created with the org-directive #+ipynb-newcell
 ;;
 ;; This exporter supports ipython and R Juypter notebooks. Other languages could
@@ -98,6 +103,8 @@ The cdr of SRC-RESULT is the end position of the results."
          img-path img-data
          (start 0)
          end
+	 (src-metadata (or (org-export-read-attribute :attr_ipynb src-block)
+			   (make-hash-table)))
          block-start block-end
          html
          latex
@@ -181,7 +188,7 @@ The cdr of SRC-RESULT is the end position of the results."
     `((cell_type . "code")
       (execution_count . 1)
       ;; the hashtable trick converts to {} in json. jupyter can't take a null here.
-      (metadata . ,(make-hash-table))
+      (metadata . ,src-metadata)
       (outputs . ,(if (null output-cells)
                       ;; (vector) json-encodes to  [], not null which
                       ;; jupyter does not like.
@@ -283,12 +290,17 @@ This only fixes file links with no description I think."
                 s
                 'md t '(:with-toc nil :with-tags nil))))
 	 (pos 0)
-	 (attachments '()))
+	 (attachments '())
+	 metadata)
     ;; we need to do some work to make images inlined for portability.
     (while (setq pos (string-match "(attachment:\\(.*\\))" md (+ 1 pos)))
       (push  (list (match-string 1 md)
 		   (list "image/png" (cdr (assoc (match-string 1 md) ox-ipynb-images))))
 	     attachments))
+
+    ;; metadata handling
+    (when (string-match "#\\+attr_ipynb: *\\(.*\\)" s)
+      (setq metadata (read (format "(%s)" (match-string 1 s)))))
 
     (if (not (string= "" (s-trim md)))
 	(if attachments
@@ -298,7 +310,7 @@ This only fixes file links with no description I think."
 	      (source . ,(vconcat
 			  (list md))))
 	  `((cell_type . "markdown")
-	    (metadata . ,(make-hash-table))
+	    (metadata . ,(or metadata (make-hash-table)))
 	    (source . ,(vconcat
 			(list md)))))
       nil)))
@@ -352,7 +364,7 @@ those exist, default to ipython."
 
 (defun ox-ipynb-split-text (s)
   "Given a string S, split it into substrings.
-Each heading is its own string. Also, split on #+ipynb-newcell.
+Each heading is its own string. Also, split on #+ipynb-newcell and #+attr_ipynb.
 Empty strings are eliminated."
   (let* ((s1 (s-slice-at org-heading-regexp s))
          ;; split headers out
@@ -365,14 +377,21 @@ Empty strings are eliminated."
                      (list string))))
          (s3 (loop for string in s2
                    append
-                   (split-string string "#\\+ipynb-newcell"))))
+                   (split-string string "#\\+ipynb-newcell")))
+	 ;; check for paragraph metadata and split on that, but keep the attribute.
+	 (s4 (loop for string in s3
+                   append
+		   ;; Note I specifically leave of the b: in this pattern
+                   (split-string string "^#\\+attr_ipyn")))
+	 (s5 (loop for string in s4 collect
+		   (if (string-prefix-p "b: " string t)
+		       (concat "#+attr_ipyn" string)
+		     string))))
 
-    s3))
+    s5))
 
 
 (defun ox-ipynb-export-to-buffer-data ()
-
-
   ;; This is a hack to remove empty Results. I think this is a bug in org-mode,
   ;; that it exports empty results to have a nil in them without a \n, which
   ;; causes this exporter to fail to find them.
@@ -589,9 +608,13 @@ Optional argument INFO is a plist of options."
 		(org-entry-get nil "EXPORT_FILE_NAME")
 		(when (boundp 'export-file-name) export-file-name)
 		(concat (file-name-base (buffer-file-name)) ".ipynb")))
+	(content (buffer-string))
         buf)
-    (org-org-export-as-org async subtreep visible-only body-only info)
-    (with-current-buffer "*Org ORG Export*"
+    ;; (org-org-export-as-org async subtreep visible-only body-only info)
+    ;;    (with-current-buffer "*Org ORG Export*"
+    (with-temp-buffer
+      (insert content)
+      (org-mode)
       (setq-local export-file-name ipynb)
 
       ;; Reminder to self. This is not a regular kind of exporter. We have to
@@ -629,13 +652,13 @@ Optional argument INFO is a plist of options."
 				   (if (s-starts-with? "{" entry) 1 0)
 				   (if (s-ends-with? "}" entry) -1 nil)))))))))
 
-
     (setq buf (ox-ipynb-export-to-buffer))
     (with-current-buffer buf
       (setq-local export-file-name ipynb))
-    (prog1
-	buf
-      (kill-buffer "*Org ORG Export*"))))
+    ;; (prog1
+    ;; 	buf
+    ;;   (kill-buffer "*Org ORG Export*"))
+    buf))
 
 
 (defun ox-ipynb-export-to-ipynb-file (&optional async subtreep visible-only body-only info)
