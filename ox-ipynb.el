@@ -306,7 +306,7 @@ This only fixes file links with no description I think."
 	(if attachments
 	    `((attachments . ,attachments)
 	      (cell_type . "markdown")
-	      (metadata . ,(make-hash-table))
+	      (metadata . ,(or metadata (make-hash-table)))
 	      (source . ,(vconcat
 			  (list md))))
 	  `((cell_type . "markdown")
@@ -694,12 +694,29 @@ Optional argument INFO is a plist of options."
      (format "jupyter notebook \"%s\"" fname))))
 
 
+(defun ox-ipynb-export-to-ipynb-slides-and-open (&optional async subtreep visible-only body-only info)
+  "Export current buffer to a slide show and open it.
+Optional argument ASYNC to asynchronously export.
+Optional argument SUBTREEP to export current subtree.
+Optional argument VISIBLE-ONLY to only export visible content.
+Optional argument BODY-ONLY export only the body.
+Optional argument INFO is a plist of options."
+  (let* ((async-shell-command-buffer 'confirm-kill-buffer)
+         (fname (expand-file-name
+                 (ox-ipynb-export-to-ipynb-file async subtreep visible-only body-only info))))
+    ;; close the .ipynb buffer.
+    (kill-buffer (find-file-noselect fname))
+    (async-shell-command
+     (format "jupyter nbconvert \"%s\" --to slides --post serve" fname))))
+
+
 (org-export-define-derived-backend 'jupyter-notebook 'org
   :menu-entry
   '(?n "Export to jupyter notebook"
        ((?b "to buffer" ox-ipynb-export-to-ipynb-buffer)
         (?n "to notebook" ox-ipynb-export-to-ipynb-file)
-        (?o "to notebook and open" ox-ipynb-export-to-ipynb-file-and-open))))
+        (?o "to notebook and open" ox-ipynb-export-to-ipynb-file-and-open)
+	(?s "to slides and open" ox-ipynb-export-to-ipynb-slides-and-open))))
 
 
 (provide 'ox-ipynb)
