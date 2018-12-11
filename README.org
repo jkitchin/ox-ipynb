@@ -13,7 +13,11 @@ See this example org-file: [[./example.org]] and the corresponding ipynb: [[./ex
 (require 'ox-ipynb)
 #+END_SRC
 
-This will install a new export menu titled "Export to jupyter notebook" with three sub-options to export to a buffer, to a file, and to a file and open.
+This will install a new export menu titled "Export to jupyter notebook" with the sub-options to export to a buffer, to a file, to a file and open, and to slides and open.
+
+** Slideshows
+
+See [[./ipynb-slideshow.org]] to see how to make a slideshow out an org-file.
 
 ** Adding a new language
 
