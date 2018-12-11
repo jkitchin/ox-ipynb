@@ -1,0 +1,66 @@
+#+TITLE: An example ipynb slideshow from org-mode
+#+author: John Kitchin
+
+
+* Introduction
+   :PROPERTIES:
+   :metadata: (slideshow . ((slide_type . slide)))
+   :END:
+
+One feature of Jupyter notebooks that is sometimes used is custom cell metadata. This can, for example be used to put names on a cell, or tags for future analysis or conversion. One of the main uses is for annotating cells as part of a slide show. A cell can be a slide, subslide, fragment, note or skip.
+
+ox-ipynb mostly supports this now. You can add metadata to a heading via properties or paragraphs via an attr_ipynb line or to a code block. The syntax is lispy, basically cons and list cells. These are read by emacs-lisp and converted to json at export time.
+
+#+attr_ipynb:  (name . cell-range) (tags . (range print)) (slideshow . ((slide_type . slide)))
+#+BEGIN_SRC ipython
+for i in range(5):
+    print(i)
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[2]:
+# output
+0
+1
+2
+3
+4
+
+:END:
+
+
+#+attr_ipynb: (name . unique-cell) (tags . (tag1 tag2)) (slideshow . ((slide_type . slide)))
+You can also use it to put a name and list of tags on a markdown cell.
+
+
+#+attr_ipynb: (slideshow . ((slide_type . subslide)))
+For convenience you can call =ox-ipynb-insert-slide= to insert the metadata on a paragraph or src-block. It will offer completion on the types of slides you can insert.
+
+#+attr_ipynb: (slideshow . ((slide_type . notes)))
+This paragraph is just for notes. It won't show in the slide show.
+
+#+attr_ipynb: (slideshow . ((slide_type . skip)))
+No one should probably see this in the slide show.
+
+
+#+attr_ipynb: (slideshow . ((slide_type . slide)))
+These features were requested in these issues:
+
+https://github.com/jkitchin/ox-ipynb/issues/6
+
+https://github.com/jkitchin/ox-ipynb/issues/11
+
+
+
+** Export as slide show
+   :PROPERTIES:
+   :metadata: (slideshow . ((slide_type . slide)))
+   :END:
+There is a new export option =ox-ipynb-export-to-ipynb-slides-and-open=
+
+*** Or if you like keybindings
+   :PROPERTIES:
+   :metadata: (slideshow . ((slide_type . fragment)))
+   :END:
+  C-c C-e n s.

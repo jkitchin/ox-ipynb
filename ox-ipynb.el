@@ -93,6 +93,14 @@
 They are reverse-engineered from existing notebooks.")
 
 
+(defun ox-ipynb-insert-slide (type)
+  "Insert the attribute line for a slide TYPE."
+  (interactive (list (completing-read "Type: " '(slide subslide fragment notes skip))))
+  (goto-char (line-beginning-position))
+  (insert (format "#+attr_ipynb: (slideshow . ((slide_type . %s)))" type))
+  (when (not (looking-at "$")) (insert "\n")))
+
+
 (defun ox-ipynb-export-code-cell (src-result)
   "Return a code cell for the org-element in the car of SRC-RESULT.
 The cdr of SRC-RESULT is the end position of the results."
@@ -103,7 +111,8 @@ The cdr of SRC-RESULT is the end position of the results."
          img-path img-data
          (start 0)
          end
-	 (src-metadata (or (org-export-read-attribute :attr_ipynb src-block)
+	 (src-metadata (or (when-let (smd (plist-get  (cadr src-block) :attr_ipynb))
+			     (read (format "(%s)" (s-join " " smd))))
 			   (make-hash-table)))
          block-start block-end
          html
@@ -271,21 +280,31 @@ This only fixes file links with no description I think."
          ;; levels otherwise. This one outputs exactly the level that is listed.
 	 ;; Also, I modify the table exporters here to get a markdown table for
 	 ncolumns
-         (md (cl-letf (((symbol-function 'org-export-get-relative-level)
-                        (lambda (headline info) (org-element-property :level headline)))
-
-		       ((symbol-function 'org-html-table-cell) (lambda (table-cell contents info)
-								 (s-concat  (org-trim (or contents "")) "|")))
-		       ((symbol-function 'org-html-table-row) (lambda (table-row contents info)
-								(cond
-								 ((eq (org-element-property :type table-row) 'standard)
-								  (setq ncolumns (- (s-count-matches "|" contents) 1))
-								  (concat "| " contents))
-								 ;; I think this is what the rule/horizontal lines are
-								 (t
-								  (concat "|---" (loop for i to (- ncolumns 1) concat "|---") "|")))))
-		       ((symbol-function 'org-html-table) (lambda (table-cell contents info)
-							    (replace-regexp-in-string "\n\n" "\n" (or contents "")))))
+         (md (cl-letf (((symbol-function 'org-md-headline)
+			(lambda (HEADLINE CONTENTS INFO)
+			  (concat
+			   (loop for i to (org-element-property :level HEADLINE)
+				 concat "#")
+			   " "
+			   (org-element-property :raw-value HEADLINE))))
+		       ((symbol-function 'org-export-get-relative-level)
+                        (lambda (headline info)
+			  (org-element-property :level headline)))
+		       ((symbol-function 'org-html-table-cell)
+			(lambda (table-cell contents info)
+			  (s-concat  (org-trim (or contents "")) "|")))
+		       ((symbol-function 'org-html-table-row)
+			(lambda (table-row contents info)
+			  (cond
+			   ((eq (org-element-property :type table-row) 'standard)
+			    (setq ncolumns (- (s-count-matches "|" contents) 1))
+			    (concat "| " contents))
+			   ;; I think this is what the rule/horizontal lines are
+			   (t
+			    (concat "|---" (loop for i to (- ncolumns 1) concat "|---") "|")))))
+		       ((symbol-function 'org-html-table)
+			(lambda (table-cell contents info)
+			  (replace-regexp-in-string "\n\n" "\n" (or contents "")))))
                (org-export-string-as
                 s
                 'md t '(:with-toc nil :with-tags nil))))
@@ -298,8 +317,13 @@ This only fixes file links with no description I think."
 		   (list "image/png" (cdr (assoc (match-string 1 md) ox-ipynb-images))))
 	     attachments))
 
-    ;; metadata handling
+    ;; metadata handling, work on the original string since the attr line is
+    ;; gone from the export
     (when (string-match "#\\+attr_ipynb: *\\(.*\\)" s)
+      (setq metadata (read (format "(%s)" (match-string 1 s)))))
+
+    ;; check headline metadata
+    (when (string-match ":metadata: *\\(.*\\)" s)
       (setq metadata (read (format "(%s)" (match-string 1 s)))))
 
     (if (not (string= "" (s-trim md)))
@@ -371,9 +395,18 @@ Empty strings are eliminated."
          (s2 (loop for string in s1
                    append
                    (if (string-match org-heading-regexp string)
-                       (let ((si (split-string string "\n")))
-                         (list (car si)
-                               (mapconcat 'identity (cdr si) "\n")))
+                       (let ((si (split-string string "\n"))
+			     heading content)
+			 ;; The first one is definitely the heading. We may also
+			 ;; need properties.
+			 (setq heading (pop si))
+			 (when (and si (s-matches? ":PROPERTIES:" (car si)))
+			   (setq heading (concat "\n" heading (pop si) "\n"))
+			   (while (not (s-matches? ":END:" (car si)))
+			     (setq heading (concat heading (pop si) "\n")))
+			   (setq heading (concat heading (pop si) "\n")))
+                         (list heading
+			       (mapconcat 'identity si "\n")))
                      (list string))))
          (s3 (loop for string in s2
                    append
@@ -381,7 +414,8 @@ Empty strings are eliminated."
 	 ;; check for paragraph metadata and split on that, but keep the attribute.
 	 (s4 (loop for string in s3
                    append
-		   ;; Note I specifically leave of the b: in this pattern
+		   ;; Note I specifically leave off the b: in this pattern so I
+		   ;; can use it in the next section
                    (split-string string "^#\\+attr_ipyn")))
 	 (s5 (loop for string in s4 collect
 		   (if (string-prefix-p "b: " string t)
