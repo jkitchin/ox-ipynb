@@ -613,17 +613,19 @@ nil:END:"  nil t)
 Only ipython source blocks are exported as code cells. Everything
 else is exported as a markdown cell. The output is in *ox-ipynb*."
   (interactive)
-  ;; Put the json into a buffer
-  (let ((data (ox-ipynb-export-to-buffer-data))
-	(ipynb (or (and (boundp 'export-file-name) export-file-name)
-		   (concat (file-name-base (buffer-file-name)) ".ipynb"))))
-    (with-current-buffer (get-buffer-create "*ox-ipynb*")
-      (erase-buffer)
-      (insert (json-encode data)))
+  (org-export-with-buffer-copy
+   ;; Put the json into a buffer
+   (let ((data (ox-ipynb-export-to-buffer-data))
+	 (ipynb (or (and (boundp 'export-file-name) export-file-name)
+		    (concat (file-name-base (buffer-file-name)) ".ipynb"))))
+     (with-current-buffer (get-buffer-create "*ox-ipynb*")
+       (erase-buffer)
+       (insert (json-encode data)))
 
-    (switch-to-buffer "*ox-ipynb*")
-    (setq-local export-file-name ipynb)
-    (get-buffer "*ox-ipynb*")))
+     (switch-to-buffer "*ox-ipynb*")
+     (setq-local export-file-name ipynb)
+     (get-buffer "*ox-ipynb*"))))
+
 
 (defun ox-ipynb-nbopen (fname)
   "Open FNAME in jupyter notebook."
