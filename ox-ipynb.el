@@ -443,6 +443,8 @@ nil:END:"  nil t)
     (while (re-search-forward "\\(#\\+BEGIN:.*\\)nil"  nil t)
       (replace-match "\\1")))
 
+  ;; expand any include files
+  (org-export-expand-include-keyword)
 
   ;; preprocess some org-elements that need to be exported to strings prior to
   ;; the rest. This is not complete. Do these in reverse so the buffer positions
