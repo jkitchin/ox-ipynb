@@ -381,7 +381,13 @@ those exist, default to ipython."
 	   (org-element-map (org-element-parse-buffer)
 	       'src-block
 	     (lambda (src)
-	       (org-element-property :language src))
+	       (unless (string= "none"
+				(plist-get
+				 (read
+				  (format "(%s)"
+					  (org-element-property :parameters src)))
+				 :exports))
+		 (org-element-property :language src)))
 	     nil t)
 	   "ipython")))
 
