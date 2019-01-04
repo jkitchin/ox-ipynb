@@ -493,7 +493,8 @@ nil:END:"  nil t)
                                  ,(cdr (assoc ox-ipynb-language ox-ipynb-kernelspecs))
                                  ,(cdr (assoc ox-ipynb-language ox-ipynb-language-infos)))))
          (ipynb (or (and (boundp 'export-file-name) export-file-name)
-                    (concat (file-name-base (buffer-file-name)) ".ipynb")))
+                    (concat (file-name-base (or (buffer-file-name)
+						"Untitled")) ".ipynb")))
          src-blocks
          src-results
          current-src
@@ -658,10 +659,33 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 		(setf (buffer-substring (org-element-property :begin hl)
 					(org-element-property :end hl))
 		      ""))))
+
+   ;; Now we should remove any src blocks with :exports none in them
+   (cl-loop for src in
+	    (reverse
+	     (org-element-map (org-element-parse-buffer)
+		 'src-block
+	       (lambda (src)
+		 (when (string= "none"
+				(plist-get
+				 (read
+				  (format "(%s)"
+					  (org-element-property :parameters src)))
+				 :exports))
+		   src))))
+	    do
+	    (goto-char (org-element-property :begin src))
+	    (org-babel-remove-result)
+	    (setf (buffer-substring (org-element-property :begin src)
+				    (org-element-property :end src))
+		  ""))
+
    ;; Now get the data and put the json into a buffer
    (let ((data (ox-ipynb-export-to-buffer-data))
 	 (ipynb (or (and (boundp 'export-file-name) export-file-name)
-		    (concat (file-name-base (buffer-file-name)) ".ipynb"))))
+		    (concat (file-name-base
+			     (or (buffer-file-name)
+				 "Untitled")) ".ipynb"))))
      (with-current-buffer (get-buffer-create "*ox-ipynb*")
        (erase-buffer)
        (insert (json-encode data)))
@@ -689,7 +713,8 @@ Optional argument INFO is a plist of options."
   (let ((ipynb (or
 		(org-entry-get nil "EXPORT_FILE_NAME")
 		(when (boundp 'export-file-name) export-file-name)
-		(concat (file-name-base (buffer-file-name)) ".ipynb")))
+		(concat (file-name-base (or (buffer-file-name)
+					    "Untitled")) ".ipynb")))
 	(content (buffer-string))
         buf)
     ;; (org-org-export-as-org async subtreep visible-only body-only info)
