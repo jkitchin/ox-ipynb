@@ -620,7 +620,45 @@ Only ipython source blocks are exported as code cells. Everything
 else is exported as a markdown cell. The output is in *ox-ipynb*."
   (interactive)
   (org-export-with-buffer-copy
-   ;; Put the json into a buffer
+   ;; First, let's delete any headings in :exclude-tags
+   (let ((exclude-tags (or (plist-get (org-export--get-inbuffer-options) :exclude-tags)
+			   org-export-exclude-tags)))
+     (cl-loop for hl in
+	      (reverse
+	       (org-element-map (org-element-parse-buffer) 'headline
+		 (lambda (hl)
+		   (when (-intersection (org-get-tags
+					 (org-element-property :begin hl))
+					exclude-tags)
+		     hl))))
+	      do
+	      (setf (buffer-substring (org-element-property :begin hl)
+				      (org-element-property :end hl))
+		    "")))
+
+   ;; Now delete anything not in select_tags, but only if there is some headline
+   ;; with one of the tags.
+   (let* ((select-tags (or (plist-get (org-export--get-inbuffer-options) :select-tags)
+			   org-export-select-tags))
+	  (found nil)
+	  (hls (reverse
+		(org-element-map (org-element-parse-buffer) 'headline
+		  (lambda (hl)
+		    (when (-intersection (org-get-tags
+					  (org-element-property :begin hl))
+					 select-tags)
+		      (setq found t))
+		    (unless (-intersection (org-get-tags
+					    (org-element-property :begin hl))
+					   select-tags)
+		      hl))))))
+     (when found
+       (cl-loop for hl in hls
+		do
+		(setf (buffer-substring (org-element-property :begin hl)
+					(org-element-property :end hl))
+		      ""))))
+   ;; Now get the data and put the json into a buffer
    (let ((data (ox-ipynb-export-to-buffer-data))
 	 (ipynb (or (and (boundp 'export-file-name) export-file-name)
 		    (concat (file-name-base (buffer-file-name)) ".ipynb"))))
