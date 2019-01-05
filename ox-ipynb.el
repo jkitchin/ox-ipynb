@@ -56,6 +56,11 @@
 (require 'json)
 
 
+(defcustom ox-ipynb-preprocess-hook '()
+  "Hook variable to apply to a copy of the buffer before exporting."
+  :group 'ox-ipynb)
+
+
 (defvar ox-ipynb-kernelspecs '((ipython . (kernelspec . ((display_name . "Python 3")
                                                          (language . "python")
                                                          (name . "python3"))))
@@ -492,9 +497,7 @@ nil:END:"  nil t)
                                            keywords))
                                  ,(cdr (assoc ox-ipynb-language ox-ipynb-kernelspecs))
                                  ,(cdr (assoc ox-ipynb-language ox-ipynb-language-infos)))))
-         (ipynb (or (and (boundp 'export-file-name) export-file-name)
-                    (concat (file-name-base (or (buffer-file-name)
-						"Untitled")) ".ipynb")))
+         (ipynb (ox-ipynb-notebook-filename))
          src-blocks
          src-results
          current-src
@@ -615,6 +618,46 @@ nil:END:"  nil t)
     data))
 
 
+
+(defun ox-ipynb-notebook-filename ()
+  "Get filename for export."
+  (or (and (boundp 'export-file-name) export-file-name)
+      ;; subtree
+      (org-entry-get (point) "EXPORT_FILE_NAME")
+      ;; file level
+      (org-element-map (org-element-parse-buffer 'element) 'keyword
+	(lambda (k)
+	  (when (string= "EXPORT_FILE_NAME" (org-element-property :key k))
+	    (org-element-property :value k)))
+	nil t)
+      ;; last case
+      (concat (file-name-base
+	       (or (buffer-file-name)
+		   "Untitled")) ".ipynb")))
+
+
+(defun ox-ipynb-preprocess-ignore ()
+  "Process the ignore headlines similar to
+  `org-export-ignore-headlines'."
+  (goto-char (point-min))
+  (while (re-search-forward org-heading-regexp nil 'mv)
+    (when (-contains? (org-get-tags) "ignore")
+      (save-restriction
+	(org-narrow-to-subtree)
+	;; first remove headline and properties.
+	(beginning-of-line)
+	(setf (buffer-substring (point)
+				(progn (org-end-of-meta-data)
+				       (point)))
+	      "")
+	;; now, promote any remaining headlines in this section
+	(while (re-search-forward org-heading-regexp nil 'mv)
+	  (org-promote))))))
+
+
+(add-hook 'ox-ipynb-preprocess-hook 'ox-ipynb-preprocess-ignore)
+
+
 (defun ox-ipynb-export-to-buffer ()
   "Export the current buffer to ipynb format in a buffer.
 Only ipython source blocks are exported as code cells. Everything
@@ -680,12 +723,12 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 				    (org-element-property :end src))
 		  ""))
 
+   ;; And finally run any additional hooks
+   (cl-loop for func in ox-ipynb-preprocess-hook do (funcall func))
+
    ;; Now get the data and put the json into a buffer
    (let ((data (ox-ipynb-export-to-buffer-data))
-	 (ipynb (or (and (boundp 'export-file-name) export-file-name)
-		    (concat (file-name-base
-			     (or (buffer-file-name)
-				 "Untitled")) ".ipynb"))))
+	 (ipynb (ox-ipynb-notebook-filename)))
      (with-current-buffer (get-buffer-create "*ox-ipynb*")
        (erase-buffer)
        (insert (json-encode data)))
@@ -710,11 +753,7 @@ Optional argument SUBTREEP to export current subtree.
 Optional argument VISIBLE-ONLY to only export visible content.
 Optional argument BODY-ONLY export only the body.
 Optional argument INFO is a plist of options."
-  (let ((ipynb (or
-		(org-entry-get nil "EXPORT_FILE_NAME")
-		(when (boundp 'export-file-name) export-file-name)
-		(concat (file-name-base (or (buffer-file-name)
-					    "Untitled")) ".ipynb")))
+  (let ((ipynb (ox-ipynb-notebook-filename))
 	(content (buffer-string))
         buf)
     ;; (org-org-export-as-org async subtreep visible-only body-only info)
