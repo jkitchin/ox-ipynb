@@ -55,6 +55,8 @@
 (require 's)
 (require 'json)
 
+(unless  (string-match "^9\\.2\\." (org-version))
+  (warn "org 9.2+ is required for `ox-ipynb'. Earlier versions do not currentl work."))
 
 (defcustom ox-ipynb-preprocess-hook '()
   "Hook variable to apply to a copy of the buffer before exporting."
