@@ -229,10 +229,14 @@ or $$fragment$$ for ipynb."
 (defun ox-ipynb-filter-link (text _ _)
   "Make a link in TEXT into markdown.
 For some reason I was getting angle brackets in them I wanted to remove.
-This only fixes file links with no description I think."
-  (if (s-starts-with? "<" text)
+This only fixes file links with no description I think.
+
+[2019-08-11 Sun] added a small additional condition to not change
+text starting with <sup. These are citations, and the previous
+version was incorrectly modifying them."
+  (if (and (s-starts-with? "<" text) (not (s-starts-with? "<sup" text)))
       (let ((path (substring text 1 -1)))
-        (format "[%s](%s)" path path))
+	(format "[%s](%s)" path path))
     text))
 
 
