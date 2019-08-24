@@ -294,7 +294,7 @@ version was incorrectly modifying them."
          (md (cl-letf (((symbol-function 'org-md-headline)
 			(lambda (HEADLINE CONTENTS INFO)
 			  (concat
-			   (loop for i to (org-element-property :level HEADLINE)
+			   (cl-loop for i to (org-element-property :level HEADLINE)
 				 concat "#")
 			   " "
 			   (org-element-property :raw-value HEADLINE))))
@@ -312,7 +312,7 @@ version was incorrectly modifying them."
 			    (concat "| " contents))
 			   ;; I think this is what the rule/horizontal lines are
 			   (t
-			    (concat "|---" (loop for i to (- ncolumns 1) concat "|---") "|")))))
+			    (concat "|---" (cl-loop for i to (- ncolumns 1) concat "|---") "|")))))
 		       ((symbol-function 'org-html-table)
 			(lambda (table-cell contents info)
 			  (replace-regexp-in-string "\n\n" "\n" (or contents "")))))
@@ -360,12 +360,12 @@ version was incorrectly modifying them."
                                  (org-element-property :value key)))))
          (ipynb-keywords (cdr (assoc "OX-IPYNB-KEYWORD-METADATA" all-keywords)))
          (include-keywords (mapcar 'upcase (split-string (or ipynb-keywords ""))))
-         (keywords (loop for key in include-keywords
+         (keywords (cl-loop for key in include-keywords
                          if (assoc key all-keywords)
                          collect (cons key (or (cdr (assoc key all-keywords)) "")))))
 
     (setq keywords
-          (loop for (key . value) in keywords
+          (cl-loop for (key . value) in keywords
                 collect
                 (format "- %s: %s\n"
                         key
@@ -409,7 +409,7 @@ Each heading is its own string. Also, split on #+ipynb-newcell and #+attr_ipynb.
 Empty strings are eliminated."
   (let* ((s1 (s-slice-at org-heading-regexp s))
          ;; split headers out
-         (s2 (loop for string in s1
+         (s2 (cl-loop for string in s1
                    append
                    (if (string-match org-heading-regexp string)
                        (let ((si (split-string string "\n"))
@@ -425,16 +425,16 @@ Empty strings are eliminated."
                          (list heading
 			       (mapconcat 'identity si "\n")))
                      (list string))))
-         (s3 (loop for string in s2
+         (s3 (cl-loop for string in s2
                    append
                    (split-string string "#\\+ipynb-newcell")))
 	 ;; check for paragraph metadata and split on that, but keep the attribute.
-	 (s4 (loop for string in s3
+	 (s4 (cl-loop for string in s3
                    append
 		   ;; Note I specifically leave off the b: in this pattern so I
 		   ;; can use it in the next section
                    (split-string string "^#\\+attr_ipyn")))
-	 (s5 (loop for string in s4 collect
+	 (s5 (cl-loop for string in s4 collect
 		   (if (string-prefix-p "b: " string t)
 		       (concat "#+attr_ipyn" string)
 		     string))))
@@ -498,8 +498,8 @@ nil:END:"  nil t)
                                                                         (org-element-property :value key)))))
                                                 (ipynb-keywords (cdr (assoc "OX-IPYNB-KEYWORD-METADATA" all-keywords)))
                                                 (include-keywords (mapcar 'upcase (split-string (or ipynb-keywords ""))))
-                                                (keywords (loop for key in include-keywords
-                                                                collect (assoc key all-keywords))))
+                                                (keywords (cl-loop for key in include-keywords
+                                                                   collect (assoc key all-keywords))))
                                            keywords))
                                  ,(cdr (assoc ox-ipynb-language ox-ipynb-kernelspecs))
                                  ,(cdr (assoc ox-ipynb-language ox-ipynb-language-infos)))))
@@ -522,38 +522,38 @@ nil:END:"  nil t)
     ;; corresponding results. We assume that before, between and after src
     ;; blocks there are markdown cells.
     (setq src-results
-          (loop for src in src-blocks
-                with result=nil
-                do
-                (setq result
-                      (save-excursion
-                        (goto-char (org-element-property :begin src))
-                        (let ((location (org-babel-where-is-src-block-result nil nil))
-                              start end
-                              result-content)
-                          (when location
-                            (save-excursion
-                              (goto-char location)
-                              (when (looking-at
-                                     (concat org-babel-result-regexp ".*$"))
-                                (setq start (1- (match-beginning 0))
-                                      end (progn (forward-line 1) (org-babel-result-end))
-                                      result-content (buffer-substring-no-properties
-                                                      start end))
-                                ;; clean up the results a little. This gets rid
-                                ;; of the RESULTS markers for output and drawers
-                                (loop for pat in '("#\\+RESULTS:"
-                                                   "^: " "^:RESULTS:\\|^:END:")
-                                      do
-                                      (setq result-content (replace-regexp-in-string
-                                                            pat
-                                                            ""
-                                                            result-content)))
-                                ;; the results and the end of the results.
-                                ;; we use the end later to move point.
-                                (cons (s-trim result-content) end)))))))
-                collect
-                (cons src result)))
+          (cl-loop for src in src-blocks
+                   with result=nil
+                   do
+                   (setq result
+			 (save-excursion
+                           (goto-char (org-element-property :begin src))
+                           (let ((location (org-babel-where-is-src-block-result nil nil))
+				 start end
+				 result-content)
+                             (when location
+                               (save-excursion
+				 (goto-char location)
+				 (when (looking-at
+					(concat org-babel-result-regexp ".*$"))
+                                   (setq start (1- (match-beginning 0))
+					 end (progn (forward-line 1) (org-babel-result-end))
+					 result-content (buffer-substring-no-properties
+							 start end))
+                                   ;; clean up the results a little. This gets rid
+                                   ;; of the RESULTS markers for output and drawers
+                                   (cl-loop for pat in '("#\\+RESULTS:"
+							 "^: " "^:RESULTS:\\|^:END:")
+					    do
+					    (setq result-content (replace-regexp-in-string
+								  pat
+								  ""
+								  result-content)))
+                                   ;; the results and the end of the results.
+                                   ;; we use the end later to move point.
+                                   (cons (s-trim result-content) end)))))))
+                   collect
+                   (cons src result)))
 
     (setq current-source (pop src-results))
 
@@ -566,19 +566,19 @@ nil:END:"  nil t)
           (let ((text (buffer-substring-no-properties
                        (point-min)
                        (org-element-property :begin (car current-source)))))
-            (loop for s in (ox-ipynb-split-text text)
-                  unless (string= "" (s-trim s))
-                  do
-                  (when-let ((md (ox-ipynb-export-markdown-cell s)))
-                    (push md cells)))))
+            (cl-loop for s in (ox-ipynb-split-text text)
+                     unless (string= "" (s-trim s))
+                     do
+                     (when-let ((md (ox-ipynb-export-markdown-cell s)))
+                       (push md cells)))))
       ;; this is a special case where there are no source blocks, and the whole
       ;; document is a markdown cell.
       (let ((text (buffer-substring-no-properties (point-min) (point-max))))
-        (loop for s in (ox-ipynb-split-text text)
-              unless (string= "" (s-trim s))
-              do
-              (when-let ((md (ox-ipynb-export-markdown-cell s)))
-                (push md cells)))))
+        (cl-loop for s in (ox-ipynb-split-text text)
+		 unless (string= "" (s-trim s))
+		 do
+		 (when-let ((md (ox-ipynb-export-markdown-cell s)))
+                   (push md cells)))))
 
     (while current-source
       ;; add the src cell
@@ -602,18 +602,18 @@ nil:END:"  nil t)
             (let ((text (buffer-substring-no-properties
                          end (org-element-property :begin
                                                    (car current-source)))))
-              (loop for s in (ox-ipynb-split-text text)
-                    unless (string= "" s)
-                    do
-                    (when-let ((md (ox-ipynb-export-markdown-cell (s-trim s))))
-                      (push md cells)))))
+              (cl-loop for s in (ox-ipynb-split-text text)
+                       unless (string= "" s)
+                       do
+                       (when-let ((md (ox-ipynb-export-markdown-cell (s-trim s))))
+			 (push md cells)))))
         ;; on last block so add rest of document
         (let ((text (buffer-substring-no-properties end (point-max))))
-          (loop for s in (ox-ipynb-split-text text)
-                unless (string= "" s)
-                do
-                (when-let ((md (ox-ipynb-export-markdown-cell (s-trim s))))
-                  (push md cells))))))
+          (cl-loop for s in (ox-ipynb-split-text text)
+                   unless (string= "" s)
+                   do
+                   (when-let ((md (ox-ipynb-export-markdown-cell (s-trim s))))
+                     (push md cells))))))
 
     (setq data (append
                 `((cells . ,(reverse cells)))
@@ -776,33 +776,33 @@ Optional argument INFO is a plist of options."
       ;; this point, they are no longer org-ref links, and have been converted
       ;; to custom-id links. They don't render because they are turned to md as
       ;; isolated strings.
-      (let ((links (loop for link in (org-element-map
-					 (org-element-parse-buffer) 'link 'identity)
-			 if (string= "custom-id" (org-element-property :type link))
-			 collect link)))
-	(loop for link in (reverse links)
-	      do
-	      (setf (buffer-substring (org-element-property :begin link)
-				      (org-element-property :end link))
-		    (format "[%s]" (org-element-property :path link)))))
+      (let ((links (cl-loop for link in (org-element-map
+					    (org-element-parse-buffer) 'link 'identity)
+			    if (string= "custom-id" (org-element-property :type link))
+			    collect link)))
+	(cl-loop for link in (reverse links)
+		 do
+		 (setf (buffer-substring (org-element-property :begin link)
+					 (org-element-property :end link))
+		       (format "[%s]" (org-element-property :path link)))))
       ;; The bibliography also leaves something to be desired. It gets turned
       ;; into an org-bibtex set of headings. Here we convert these to something
       ;; just slightly more palatable.
-      (let ((bib-entries (loop for hl in (org-element-map
-					     (org-element-parse-buffer) 'headline 'identity)
-			       if (org-element-property :=KEY= hl)
-			       collect hl)))
-	(loop for hl in (reverse bib-entries)
-	      do
-	      (setf (buffer-substring (org-element-property :begin hl)
-				      (org-element-property :end hl))
-		    (s-format "[${=KEY=}] ${AUTHOR}. ${TITLE}. https://dx.doi.org/${DOI}\n\n"
-			      (lambda (arg &optional extra)
-				(let ((entry (org-element-property (intern-soft (concat ":"arg)) hl)))
-				  (substring
-				   entry
-				   (if (s-starts-with? "{" entry) 1 0)
-				   (if (s-ends-with? "}" entry) -1 nil)))))))))
+      (let ((bib-entries (cl-loop for hl in (org-element-map
+						(org-element-parse-buffer) 'headline 'identity)
+				  if (org-element-property :=KEY= hl)
+				  collect hl)))
+	(cl-loop for hl in (reverse bib-entries)
+		 do
+		 (setf (buffer-substring (org-element-property :begin hl)
+					 (org-element-property :end hl))
+		       (s-format "[${=KEY=}] ${AUTHOR}. ${TITLE}. https://dx.doi.org/${DOI}\n\n"
+				 (lambda (arg &optional extra)
+				   (let ((entry (org-element-property (intern-soft (concat ":"arg)) hl)))
+				     (substring
+				      entry
+				      (if (s-starts-with? "{" entry) 1 0)
+				      (if (s-ends-with? "}" entry) -1 nil)))))))))
 
     (setq buf (ox-ipynb-export-to-buffer))
     (with-current-buffer buf
