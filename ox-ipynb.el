@@ -56,7 +56,7 @@
 (require 'json)
 
 (unless  (string-match "^9\\.2\\." (org-version))
-  (warn "org 9.2+ is required for `ox-ipynb'. Earlier versions do not currentl work."))
+  (warn "org 9.2+ is required for `ox-ipynb'. Earlier versions do not currently work."))
 
 (defcustom ox-ipynb-preprocess-hook '()
   "Hook variable to apply to a copy of the buffer before exporting."
@@ -862,12 +862,26 @@ Optional argument INFO is a plist of options."
      (format "jupyter nbconvert \"%s\" --to slides --post serve" fname))))
 
 
+(defun ox-ipynb-export-to-ipynb-no-results-file-and-open (&optional async subtreep visible-only body-only info)
+  "Export current buffer to a file and open it. Strip results first.
+Optional argument ASYNC to asynchronously export.
+Optional argument SUBTREEP to export current subtree.
+Optional argument VISIBLE-ONLY to only export visible content.
+Optional argument BODY-ONLY export only the body.
+Optional argument INFO is a plist of options."
+  (let ((ox-ipynb-preprocess-hook '((lambda ()
+				      (org-babel-map-src-blocks nil
+					(org-babel-remove-result))))))
+    (ox-ipynb-export-to-ipynb-file-and-open)))
+
+
 (org-export-define-derived-backend 'jupyter-notebook 'org
   :menu-entry
   '(?n "Export to jupyter notebook"
        ((?b "to buffer" ox-ipynb-export-to-ipynb-buffer)
         (?n "to notebook" ox-ipynb-export-to-ipynb-file)
-        (?o "to notebook and open" ox-ipynb-export-to-ipynb-file-and-open)
+	(?o "to notebook and open" ox-ipynb-export-to-ipynb-file-and-open)
+        (?r "to notebook with no results and open" ox-ipynb-export-to-ipynb-no-results-file-and-open)
 	(?s "to slides and open" ox-ipynb-export-to-ipynb-slides-and-open))))
 
 
