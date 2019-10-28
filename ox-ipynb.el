@@ -70,8 +70,11 @@
                                                    (language . "R")
                                                    (name . "ir"))))
                                (julia . (kernelspec . ((display_name . "Julia 0.6.0")
-						       (language . "julia")
-						       (name . "julia-0.6")))))
+                                                       (language . "julia")
+                                                       (name . "julia-0.6"))))
+                               (jupyter-python . (kernelspec . ((display_name . "Python 3")
+                                                                (language . "python")
+                                                                (name . "python3")))))
   "Kernelspec metadata for different kernels.")
 
 
@@ -95,7 +98,15 @@
                                (mimetype . "text/x-julia")
                                (name . "julia")
                                (pygments_lexer . "julia")
-                               (version . "0.6.0")))))
+                               (version . "0.6.0"))))
+    (jupyter-python . (language_info . ((codemirror_mode . ((name . ipython)
+                                                            (version . 3)))
+                                        (file_extension . ".py")
+                                        (mimetype . "text/x-python")
+                                        (name . "python")
+                                        (nbconvert_exporter . "python")
+                                        (pygments_lexer . "ipython3")
+                                        (version . "3.5.2")))))
   "These get injected into notebook metadata.
 They are reverse-engineered from existing notebooks.")
 
