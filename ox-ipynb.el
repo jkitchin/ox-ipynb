@@ -302,11 +302,12 @@ version was incorrectly modifying them."
          ;; levels otherwise. This one outputs exactly the level that is listed.
 	 ;; Also, I modify the table exporters here to get a markdown table for
 	 ncolumns
+	 (nrules 0)
          (md (cl-letf (((symbol-function 'org-md-headline)
 			(lambda (HEADLINE CONTENTS INFO)
 			  (concat
 			   (cl-loop for i to (org-element-property :level HEADLINE)
-				 concat "#")
+				    concat "#")
 			   " "
 			   (org-element-property :raw-value HEADLINE))))
 		       ((symbol-function 'org-export-get-relative-level)
@@ -323,7 +324,10 @@ version was incorrectly modifying them."
 			    (concat "| " contents))
 			   ;; I think this is what the rule/horizontal lines are
 			   (t
-			    (concat "|---" (cl-loop for i to (- ncolumns 1) concat "|---") "|")))))
+			    (if (not (= 0 nrules))
+				nil
+			      (setq nrules (+ 1 nrules))
+			      (concat "|---" (cl-loop for i to (- ncolumns 1) concat "|---") "|"))))))
 		       ((symbol-function 'org-html-table)
 			(lambda (table-cell contents info)
 			  (replace-regexp-in-string "\n\n" "\n" (or contents "")))))
