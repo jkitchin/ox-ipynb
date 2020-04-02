@@ -54,6 +54,7 @@
 (require 'ox-org)
 (require 's)
 (require 'json)
+(require 'dash)
 
 (unless (string-match "^9\\.[2-9][\\.0-9]*" (org-version))
   (warn "org 9.2+ is required for `ox-ipynb'. Earlier versions do not currently work."))
