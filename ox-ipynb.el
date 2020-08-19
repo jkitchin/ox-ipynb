@@ -901,6 +901,13 @@ Optional argument INFO is a plist of options."
 	(?s "to slides and open" ox-ipynb-export-to-ipynb-slides-and-open))))
 
 
+(defun ox-ipynb-publish-to-notebook (plist filename pub-dir)
+  "Publish an org-file to a Jupyter notebook."
+  (with-current-buffer (find-file-noselect filename)
+    (let ((output (ox-ipynb-export-to-ipynb-file)))
+      (org-publish-attachment plist (expand-file-name output)  pub-dir)
+      output)))
+
 (provide 'ox-ipynb)
 
 ;;; ox-ipynb.el ends here
