@@ -891,6 +891,25 @@ Optional argument INFO is a plist of options."
     (ox-ipynb-export-to-ipynb-file-and-open)))
 
 
+(defun ox-ipynb-export-org-file-to-ipynb-file (file)
+  "Export FILE  with `ox-ipynb-export-to-ipynb-file'.
+Works interactively: M-x ox-ipynb-export-org-file-to-ipynb-file RET
+Works non-interactively: (ox-ipynb-export-org-file-to-ipynb-file \"test.org\")
+Works in Dired+ by marking some *.org files and pressing \"@\" ox-ipynb-export-org-file-to-ipynb-file RET
+Based on the `org-babel-tangle-file' function that is to be
+found in the ob-tangle.el file."
+  (interactive "fOrg file to export as ipynb: ")
+  (let ((visited-p (find-buffer-visiting (expand-file-name file)))
+	       to-be-removed)
+    (prog1
+	    (save-window-excursion
+	      (find-file file)
+	      (setq to-be-removed (current-buffer))
+        (ox-ipynb-export-to-ipynb-file) )
+      (unless visited-p
+	      (kill-buffer to-be-removed)))))
+
+
 (org-export-define-derived-backend 'jupyter-notebook 'org
   :menu-entry
   '(?n "Export to jupyter notebook"
