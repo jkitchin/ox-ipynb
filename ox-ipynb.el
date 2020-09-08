@@ -310,7 +310,9 @@ version was incorrectly modifying them."
 			   (cl-loop for i to (org-element-property :level HEADLINE)
 				    concat "#")
 			   " "
-			   (org-element-property :raw-value HEADLINE))))
+			   (org-export-string-as
+			    (org-element-property :raw-value HEADLINE)
+			    'md t '(:with-toc nil :with-tags nil)))))
 		       ((symbol-function 'org-export-get-relative-level)
                         (lambda (headline info)
 			  (org-element-property :level headline)))
