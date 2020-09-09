@@ -304,6 +304,12 @@ version was incorrectly modifying them."
 	 ;; Also, I modify the table exporters here to get a markdown table for
 	 ncolumns
 	 (nrules 0)
+	 (org-html-text-markup-alist '((bold . "<b>%s</b>")
+				       (code . "<code>%s</code>")
+				       (italic . "<i>%s</i>")
+				       (strike-through . "<del>%s</del>")
+				       (underline . "<u>%s</u>")
+				       (verbatim . "<code>%s</code>")))  	; we overwrite the underline
          (md (cl-letf (((symbol-function 'org-md-headline)
 			(lambda (HEADLINE CONTENTS INFO)
 			  (concat
@@ -340,6 +346,7 @@ version was incorrectly modifying them."
 	 (pos 0)
 	 (attachments '())
 	 metadata)
+
     ;; we need to do some work to make images inlined for portability.
     (while (setq pos (string-match "(attachment:\\(.*\\))" md (+ 1 pos)))
       (push  (list (match-string 1 md)
