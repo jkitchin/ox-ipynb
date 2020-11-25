@@ -513,7 +513,7 @@ nil:END:"  nil t)
 
 
   ;; Now we parse the buffer.
-  (let* ((cells (if (ox-ipynb-export-keyword-cell) (list (ox-ipynb-export-keyword-cell)) '()))
+  (let* ((cells '())
          (ox-ipynb-language (ox-ipynb-get-language))
          (metadata `(metadata . ((org . ,(let* ((all-keywords (org-element-map (org-element-parse-buffer)
                                                                   'keyword
@@ -535,6 +535,33 @@ nil:END:"  nil t)
          result-end
          end
          data)
+
+    ;; Do we need a title cell?
+    (let* ((keywords (org-element-map (org-element-parse-buffer)
+			 'keyword
+		       (lambda (key)
+			 (cons (org-element-property :key key)
+			       (org-element-property :value key)))))
+	   (title (cdr (assoc "TITLE" keywords)))
+	   (author (cdr (assoc "AUTHOR" keywords)))
+	   (date (cdr (assoc "DATE" keywords)))
+	   title-string
+	   cell)
+      (when title
+	(setq title_string (format "%s\n%s\n\n" title (make-string (length title) ?=)))
+	(when author
+	  (setq title_string (format "%s**Author:** %s\n\n" title_string author)))
+	(when date
+	  (setq title_string (format "%s**Date:** %s\n\n" title_string date)))
+
+	(push `((cell_type . "markdown")
+		(metadata . ,(make-hash-table))
+		(source . ,title_string))
+	      cells)))
+
+    ;; Next keyword cells
+    (let ((kws (ox-ipynb-export-keyword-cell)))
+      (when kws (push kws cells)))
 
     (setq src-blocks (org-element-map (org-element-parse-buffer) 'src-block
                        (lambda (src)
@@ -638,6 +665,7 @@ nil:END:"  nil t)
                    do
                    (when-let ((md (ox-ipynb-export-markdown-cell (s-trim s))))
                      (push md cells))))))
+
 
     (setq data (append
                 `((cells . ,(reverse cells)))
