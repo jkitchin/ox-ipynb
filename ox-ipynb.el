@@ -417,11 +417,9 @@ those exist, default to ipython."
 	       'src-block
 	     (lambda (src)
 	       (unless (string= "none"
-				(plist-get
-				 (read
-				  (format "(%s)"
-					  (org-element-property :parameters src)))
-				 :exports))
+				(cdr (assq :exports
+				           (org-babel-parse-header-arguments
+					    (org-element-property :parameters src)))))
 		 (org-element-property :language src)))
 	     nil t)
 	   "ipython")))
@@ -768,11 +766,9 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 		 'src-block
 	       (lambda (src)
 		 (when (string= "none"
-				(plist-get
-				 (read
-				  (format "(%s)"
-					  (org-element-property :parameters src)))
-				 :exports))
+				(cdr (assq :exports
+				           (org-babel-parse-header-arguments
+					    (org-element-property :parameters src)))))
 		   src))))
 	    do
 	    (goto-char (org-element-property :begin src))
