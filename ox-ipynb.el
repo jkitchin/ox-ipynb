@@ -683,7 +683,6 @@ nil:END:"  nil t)
                    (when-let ((md (ox-ipynb-export-markdown-cell (s-trim s))))
                      (push md cells))))))
 
-
     (setq data (append
                 `((cells . ,(reverse cells)))
                 (list metadata)
@@ -815,6 +814,35 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
   "Open FNAME in jupyter notebook."
   (interactive  (list (read-file-name "Notebook: ")))
   (shell-command (format "nbopen \"%s\" &" fname)))
+
+
+(defun ox-ipynb-remove-solution ()
+  "Delete all SOLUTION regions.
+This is usually run as a function in `ox-ipynb-preprocess-hook'."
+  (goto-char (point-max))
+  (while (re-search-backward "^### BEGIN SOLUTION\\(.\\|\n\\)*?### END SOLUTION" nil t)
+    (setf (buffer-substring (match-beginning 0) (match-end 0)) "")))
+
+
+(defun ox-ipynb-remove-hidden ()
+  "Delete all HIDDEN regions.
+This is usually run as a function in `ox-ipynb-preprocess-hook'."
+  (goto-char (point-max))
+  (while (re-search-backward "^### BEGIN HIDDEN\\(.\\|\n\\)*?### END HIDDEN" nil t)
+    (setf (buffer-substring (match-beginning 0) (match-end 0)) "")))
+
+(defun ox-ipynb-remove-remove ()
+  "Delete all cells with remove in the metadata.
+This is not specific
+This is usually run as a function in `ox-ipynb-preprocess-hook'."
+  (org-babel-map-src-blocks nil
+    (let* ((src (org-element-context))
+	   (ipynb-attr (org-element-property :attr_ipynb src))
+	   remove)
+      (when (and ipynb-attr)
+	(setq remove (cdr (assoc 'remove (cadr (read (concat "(" (car ipynb-attr) ")"))))))
+	(when remove
+	  (setf (buffer-substring (org-element-property :begin src) (org-element-property :end src)) ""))))))
 
 
 ;; * export menu
@@ -951,14 +979,28 @@ Based on the `org-babel-tangle-file' function that is to be
 found in the ob-tangle.el file."
   (interactive "fOrg file to export as ipynb: ")
   (let ((visited-p (find-buffer-visiting (expand-file-name file)))
-	       to-be-removed)
+	to-be-removed)
     (prog1
-	    (save-window-excursion
-	      (find-file file)
-	      (setq to-be-removed (current-buffer))
-        (ox-ipynb-export-to-ipynb-file) )
+	(save-window-excursion
+	  (find-file file)
+	  (setq to-be-removed (current-buffer))
+          (ox-ipynb-export-to-ipynb-file) )
       (unless visited-p
-	      (kill-buffer to-be-removed)))))
+	(kill-buffer to-be-removed)))))
+
+
+(defun ox-ipynb-export-to-participant-notebook (&optional async subtreep visible-only body-only info)
+  "Export current buffer to a participant file and open it.
+Removes SOLUTION and HIDDEN regions.
+Optional argument ASYNC to asynchronously export.
+Optional argument SUBTREEP to export current subtree.
+Optional argument VISIBLE-ONLY to only export visible content.
+Optional argument BODY-ONLY export only the body.
+Optional argument INFO is a plist of options."
+  (let ((ox-ipynb-preprocess-hook '(ox-ipynb-remove-hidden
+				    ox-ipynb-remove-solution
+				    ox-ipynb-remove-remove)))
+    (ox-ipynb-export-to-ipynb-file-and-open)))
 
 
 (org-export-define-derived-backend 'jupyter-notebook 'org
@@ -967,7 +1009,8 @@ found in the ob-tangle.el file."
        ((?b "to buffer" ox-ipynb-export-to-ipynb-buffer)
         (?n "to notebook" ox-ipynb-export-to-ipynb-file)
 	(?o "to notebook and open" ox-ipynb-export-to-ipynb-file-and-open)
-        (?r "to notebook with no results and open" ox-ipynb-export-to-ipynb-no-results-file-and-open)
+	(?p "to participant nb & open" ox-ipynb-export-to-participant-notebook)
+        (?r "to nb (no results) and open" ox-ipynb-export-to-ipynb-no-results-file-and-open)
 	(?s "to slides and open" ox-ipynb-export-to-ipynb-slides-and-open))))
 
 
