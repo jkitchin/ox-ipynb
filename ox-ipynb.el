@@ -749,7 +749,7 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 	       (org-element-map (org-element-parse-buffer) 'headline
 		 (lambda (hl)
 		   (when (-intersection (org-get-tags
-					 (org-element-property :begin hl))
+					 (org-element-property :begin hl) t)
 					exclude-tags)
 		     hl))))
 	      do
@@ -770,7 +770,7 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 					 select-tags)
 		      (setq found t))
 		    (unless (-intersection (org-get-tags
-					    (org-element-property :begin hl))
+					    (org-element-property :begin hl) t)
 					   select-tags)
 		      hl))))))
      (when found
