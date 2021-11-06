@@ -1016,9 +1016,9 @@ Optional argument SUBTREEP to export current subtree.
 Optional argument VISIBLE-ONLY to only export visible content.
 Optional argument BODY-ONLY export only the body.
 Optional argument INFO is a plist of options."
-  (let ((ox-ipynb-preprocess-hook '(ox-ipynb-remove-hidden
-				    ox-ipynb-remove-solution
-				    ox-ipynb-remove-remove)))
+  (let ((ox-ipynb-preprocess-hook (append ox-ipynb-preprocess-hook '(ox-ipynb-remove-hidden
+								     ox-ipynb-remove-solution
+								     ox-ipynb-remove-remove))))
     (ox-ipynb-export-to-ipynb-file-and-open)))
 
 
