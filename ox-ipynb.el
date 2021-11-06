@@ -47,9 +47,25 @@
 ;; to enable collapsible headings to work nicely.
 ;;
 ;; You can export an org-file to a buffer, file or file and open.
+;;
+;; `ox-ipynb' supports the following features for making notebooks that don't
+;; include all the org-source. You can label regions of a code cell with ###
+;; BEGIN SOLUTION...### END SOLUTION, and if you export with
+;; `ox-ipynb-export-to-participant-notebook' those regions will be stripped out
+;; in the notebook. You can also label a region as hidden with ### BEGIN
+;; HIDDEN...### END HIDDEN.
+;;
+;; Finally any cell with
+;; #+attr_ipynb: :remove t
+;; on it will be removed in the export with `ox-ipynb-export-to-participant-notebook'.
+;;
+;; You can export a notebook with all the results stripped out with
+;; `ox-ipynb-export-to-ipynb-no-results-file-and-open'.
+
+
 
 ;;; Code:
-(require 'cl)
+(require 'cl-lib)
 (require 'ox-md)
 (require 'ox-org)
 (require 's)
