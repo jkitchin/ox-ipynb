@@ -172,9 +172,11 @@ The cdr of SRC-RESULT is the end position of the results."
       (setq img-path (match-string 1 results)
             img-data (base64-encode-string
                       (encode-coding-string
-                       (with-temp-buffer
-                         (insert-file-contents img-path)
-                         (buffer-string))
+		       (if (file-exists-p img-path)
+			   (with-temp-buffer
+                             (insert-file-contents  img-path)
+                             (buffer-string))
+			 "")
                        'binary)
                       t))
 
@@ -304,7 +306,8 @@ version was incorrectly modifying them."
 				       ;; That seems to also be a problem in the
 				       ;; notebook though.
 				       (push (cons fname img-data) ox-ipynb-images)
-				       (format "![%s](attachment:%s)" (or desc fname) fname)))))
+				       ;; (format "![%s](attachment:%s)" (or desc fname) fname)
+				       (format "![%s](data:image/png;base64,%s)" (or desc fname) img-data)))))
 
 			 ;; This puts overlays on top of the links. You can remove the overlays with C-c C-x C-v
 			 :activate-func (lambda (start end path bracketp)
@@ -319,7 +322,6 @@ version was incorrectly modifying them."
 
 ;; This re-fontifies any image links when you toggle the inline images.
 (advice-add 'org-display-inline-images :after 'font-lock-fontify-buffer)
-
 
 
 (defun ox-ipynb-export-markdown-cell (s)
