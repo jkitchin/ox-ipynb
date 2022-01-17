@@ -760,6 +760,17 @@ nil:END:"  nil t)
 (add-hook 'ox-ipynb-preprocess-hook 'ox-ipynb-preprocess-ignore)
 
 
+(defun ox-ipynb-preprocess-babel-calls ()
+  "Process babel calls to remove them.
+They don't work well in the export."
+  (goto-char (point-min))
+  (cl-loop for bc in (reverse (org-element-map (org-element-parse-buffer) 'babel-call 'identity))
+	   do
+	   (delete-region (org-element-property :begin bc)
+			  (org-element-property :end bc))))
+
+(add-hook 'ox-ipynb-preprocess-hook 'ox-ipynb-preprocess-babel-calls)
+
 (defun ox-ipynb-export-to-buffer ()
   "Export the current buffer to ipynb format in a buffer.
 Only ipython source blocks are exported as code cells. Everything
