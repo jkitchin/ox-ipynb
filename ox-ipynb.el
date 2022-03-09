@@ -26,6 +26,13 @@
 ;; Boston, MA 02111-1307, USA.
 
 ;;; Commentary:
+;;
+;; The export language is determined by the first cell. If the first cell is not
+;; the notebook language, e.g. because you use a shell block for some reason,
+;; you can specify the language with a keyword like this:
+;; 
+;; #+OX-IPYNB-LANGUAGE: jupyter-python
+;; 
 ;; It is possible to set metadata at the notebook level using
 ;; #+ox-ipynb-keyword-metadata: key1 key2
 ;; This will use store key:value pairs in
