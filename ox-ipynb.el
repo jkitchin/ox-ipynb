@@ -879,6 +879,7 @@ This is usually run as a function in `ox-ipynb-preprocess-hook'."
   (while (re-search-backward "^### BEGIN HIDDEN\\(.\\|\n\\)*?### END HIDDEN" nil t)
     (setf (buffer-substring (match-beginning 0) (match-end 0)) "")))
 
+
 (defun ox-ipynb-remove-remove ()
   "Delete all cells with remove in the metadata.
 This is not specific
@@ -888,7 +889,8 @@ This is usually run as a function in `ox-ipynb-preprocess-hook'."
 	   (ipynb-attr (org-element-property :attr_ipynb src))
 	   remove)
       (when (and ipynb-attr)
-	(setq remove (cdr (assoc 'remove (cadr (read (concat "(" (car ipynb-attr) ")"))))))
+	;; (setq remove (cdr (assoc 'remove (cadr (read (concat "(" (car ipynb-attr) ")"))))))
+	(setq remove (plist-get :remove (read (concat "(" (car ipynb-attr) ")"))))
 	(when remove
 	  (setf (buffer-substring (org-element-property :begin src) (org-element-property :end src)) ""))))))
 
