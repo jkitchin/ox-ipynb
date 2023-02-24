@@ -246,7 +246,7 @@ The cdr of SRC-RESULT is the end position of the results."
     (unless (string= "" results)
       (setq output-cells (append `(((name . "stdout")
                                     (output_type . "stream")
-                                    (text . ,results)))
+                                    (text . ,(list results))))
                                  output-cells)))
 
 
@@ -851,7 +851,8 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 	 (ipynb (ox-ipynb-notebook-filename)))
      (with-current-buffer (get-buffer-create "*ox-ipynb*")
        (erase-buffer)
-       (insert (json-encode data)))
+       (insert (json-encode data))
+       (json-pretty-print-buffer))
 
      (switch-to-buffer "*ox-ipynb*")
      (setq-local export-file-name ipynb)
