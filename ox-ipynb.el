@@ -246,7 +246,7 @@ The cdr of SRC-RESULT is the end position of the results."
     (unless (string= "" results)
       (setq output-cells (append `(((name . "stdout")
                                     (output_type . "stream")
-                                    (text . ,(list results))))
+                                    (text . ,results)))
                                  output-cells)))
 
 
@@ -359,15 +359,32 @@ version was incorrectly modifying them."
 			    'md t '(:with-toc nil :with-tags nil)))))
 		       ((symbol-function 'org-export-get-relative-level)
                         (lambda (headline info)
-			  "changed to get the level number of a headline. we need the absolute level."
+			  "changed to get the level number of a headline. We need the absolute level."
 			  (org-element-property :level headline)))
-		       ;; Tables are kind of special
+		       ;; Tables are kind of special. I want a markdown rendering, not html.
 		       ((symbol-function 'org-html-table-cell)
 			(lambda (table-cell contents info)
 			  (s-concat  (org-trim (or contents "")) "|")))
 		       ((symbol-function 'org-html-table-row) 'ox-ipynb--export-table-row)
 		       ((symbol-function 'org-html-table)
-			(lambda (table-cell contents info)
+			(lambda (_ contents info)
+			  "We need to adapt the contents to remove leading and trailing rule lines."
+
+			  ;; There are leading and trailing \n. strip off for the next step.
+			  (setq contents (string-trim contents))
+			  
+			  (let ((lines (split-string contents "\n")))
+			    (when (string-prefix-p "|-" (nth 0 lines))
+			      (setq lines (cdr lines)))
+
+			    (when (string-prefix-p "|-" (car (last lines)))
+			      (setq lines (butlast lines)))
+
+			    ;; Now add back the blank lines
+			    (setq contents (string-join (append '("") lines '(""))  "\n")))
+
+			  ;; finally, it looks like there are double line returns we
+			  ;; replace here.
 			  (replace-regexp-in-string "\n\n" "\n" (or contents "")))))
                (org-export-string-as
                 s
@@ -851,8 +868,7 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 	 (ipynb (ox-ipynb-notebook-filename)))
      (with-current-buffer (get-buffer-create "*ox-ipynb*")
        (erase-buffer)
-       (insert (json-encode data))
-       (json-pretty-print-buffer))
+       (insert (json-encode data)))
 
      (switch-to-buffer "*ox-ipynb*")
      (setq-local export-file-name ipynb)
@@ -880,7 +896,6 @@ This is usually run as a function in `ox-ipynb-preprocess-hook'."
   (while (re-search-backward "^### BEGIN HIDDEN\\(.\\|\n\\)*?### END HIDDEN" nil t)
     (setf (buffer-substring (match-beginning 0) (match-end 0)) "")))
 
-
 (defun ox-ipynb-remove-remove ()
   "Delete all cells with remove in the metadata.
 This is not specific
@@ -890,8 +905,7 @@ This is usually run as a function in `ox-ipynb-preprocess-hook'."
 	   (ipynb-attr (org-element-property :attr_ipynb src))
 	   remove)
       (when (and ipynb-attr)
-	;; (setq remove (cdr (assoc 'remove (cadr (read (concat "(" (car ipynb-attr) ")"))))))
-	(setq remove (plist-get :remove (read (concat "(" (car ipynb-attr) ")"))))
+	(setq remove (cdr (assoc 'remove (cadr (read (concat "(" (car ipynb-attr) ")"))))))
 	(when remove
 	  (setf (buffer-substring (org-element-property :begin src) (org-element-property :end src)) ""))))))
 
