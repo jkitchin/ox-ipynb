@@ -327,9 +327,6 @@ version was incorrectly modifying them."
 					      (overlay-put ov 'modification-hooks (list 'org-display-inline-remove-overlay))
 					      (push ov org-inline-image-overlays)))))
 
-;; This re-fontifies any image links when you toggle the inline images.
-(advice-add 'org-display-inline-images :after 'font-lock-fontify-buffer)
-
 
 (defun ox-ipynb-export-markdown-cell (s)
   "Return the markdown cell for the string S."
