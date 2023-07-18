@@ -559,23 +559,23 @@ nil:END:"  nil t)
   ;; the rest. This is not complete. Do these in reverse so the buffer positions
   ;; don't get changed in the parse tree.
   (mapc (lambda (elm)
-          (setf (buffer-substring (org-element-property :begin elm)
-                                  (org-element-property :end elm))
-                (org-md-quote-block elm
-                                    (buffer-substring
-                                     (org-element-property :contents-begin elm)
-                                     (org-element-property :contents-end elm))
-                                    nil)))
+          (cl--set-buffer-substring (org-element-property :begin elm)
+				    (org-element-property :end elm)
+				    (org-md-quote-block elm
+							(buffer-substring
+							 (org-element-property :contents-begin elm)
+							 (org-element-property :contents-end elm))
+							nil)))
         (reverse (org-element-map (org-element-parse-buffer) 'quote-block 'identity)))
 
   (mapc (lambda (elm)
-          (setf (buffer-substring (org-element-property :begin elm)
-                                  (org-element-property :end elm))
-                (org-md-export-block elm
-                                     (buffer-substring
-                                      (org-element-property :contents-begin elm)
-                                      (org-element-property :contents-end elm))
-                                     nil)))
+          (cl--set-buffer-substring (org-element-property :begin elm)
+				    (org-element-property :end elm)
+				    (org-md-export-block elm
+							 (buffer-substring
+							  (org-element-property :contents-begin elm)
+							  (org-element-property :contents-end elm))
+							 nil)))
         (reverse (org-element-map (org-element-parse-buffer) 'dynamic-block 'identity)))
 
 
@@ -771,10 +771,10 @@ nil:END:"  nil t)
 	(org-narrow-to-subtree)
 	;; first remove headline and properties.
 	(beginning-of-line)
-	(setf (buffer-substring (point)
-				(progn (org-end-of-meta-data)
-				       (point)))
-	      "")
+	(cl--set-buffer-substring (point)
+				  (progn (org-end-of-meta-data)
+					 (point))
+				  "")
 	;; now, promote any remaining headlines in this section
 	(while (re-search-forward org-heading-regexp nil 'mv)
 	  (org-promote))))))
@@ -812,9 +812,9 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 					exclude-tags)
 		     hl))))
 	      do
-	      (setf (buffer-substring (org-element-property :begin hl)
-				      (org-element-property :end hl))
-		    "")))
+	      (cl--set-buffer-substring (org-element-property :begin hl)
+					(org-element-property :end hl)
+					"")))
 
    ;; Now delete anything not in select_tags, but only if there is some headline
    ;; with one of the tags.
@@ -835,9 +835,9 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
      (when found
        (cl-loop for hl in hls
 		do
-		(setf (buffer-substring (org-element-property :begin hl)
-					(org-element-property :end hl))
-		      ""))))
+		(cl--set-buffer-substring (org-element-property :begin hl)
+					  (org-element-property :end hl)
+					  ""))))
 
    ;; Now we should remove any src blocks with :exports none in them
    (cl-loop for src in
@@ -853,9 +853,9 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 	    do
 	    (goto-char (org-element-property :begin src))
 	    (org-babel-remove-result)
-	    (setf (buffer-substring (org-element-property :begin src)
-				    (org-element-property :end src))
-		  ""))
+	    (cl--set-buffer-substring (org-element-property :begin src)
+				      (org-element-property :end src)
+				      ""))
 
    ;; And finally run any additional hooks
    (cl-loop for func in ox-ipynb-preprocess-hook do (funcall func))
@@ -883,7 +883,7 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 This is usually run as a function in `ox-ipynb-preprocess-hook'."
   (goto-char (point-max))
   (while (re-search-backward "^### BEGIN SOLUTION\\(.\\|\n\\)*?### END SOLUTION" nil t)
-    (setf (buffer-substring (match-beginning 0) (match-end 0)) "")))
+    (cl--set-buffer-substring (match-beginning 0) (match-end 0) "")))
 
 
 (defun ox-ipynb-remove-hidden ()
@@ -891,7 +891,7 @@ This is usually run as a function in `ox-ipynb-preprocess-hook'."
 This is usually run as a function in `ox-ipynb-preprocess-hook'."
   (goto-char (point-max))
   (while (re-search-backward "^### BEGIN HIDDEN\\(.\\|\n\\)*?### END HIDDEN" nil t)
-    (setf (buffer-substring (match-beginning 0) (match-end 0)) "")))
+    (cl--set-buffer-substring (match-beginning 0) (match-end 0) "")))
 
 (defun ox-ipynb-remove-remove ()
   "Delete all cells with remove in the metadata.
@@ -904,7 +904,7 @@ This is usually run as a function in `ox-ipynb-preprocess-hook'."
       (when (and ipynb-attr)
 	(setq remove (cdr (assoc 'remove (cadr (read (concat "(" (car ipynb-attr) ")"))))))
 	(when remove
-	  (setf (buffer-substring (org-element-property :begin src) (org-element-property :end src)) ""))))))
+	  (cl--set-buffer-substring (org-element-property :begin src) (org-element-property :end src) ""))))))
 
 
 ;; * export menu
@@ -939,9 +939,9 @@ Optional argument INFO is a plist of options."
 			    collect link)))
 	(cl-loop for link in (reverse links)
 		 do
-		 (setf (buffer-substring (org-element-property :begin link)
-					 (org-element-property :end link))
-		       (format "[%s]" (org-element-property :path link)))))
+		 (cl--set-buffer-substring (org-element-property :begin link)
+					   (org-element-property :end link)
+					   (format "[%s]" (org-element-property :path link)))))
       ;; The bibliography also leaves something to be desired. It gets turned
       ;; into an org-bibtex set of headings. Here we convert these to something
       ;; just slightly more palatable.
@@ -951,15 +951,15 @@ Optional argument INFO is a plist of options."
 				  collect hl)))
 	(cl-loop for hl in (reverse bib-entries)
 		 do
-		 (setf (buffer-substring (org-element-property :begin hl)
-					 (org-element-property :end hl))
-		       (s-format "[${=KEY=}] ${AUTHOR}. ${TITLE}. https://dx.doi.org/${DOI}\n\n"
-				 (lambda (arg &optional extra)
-				   (let ((entry (org-element-property (intern-soft (concat ":"arg)) hl)))
-				     (substring
-				      entry
-				      (if (s-starts-with? "{" entry) 1 0)
-				      (if (s-ends-with? "}" entry) -1 nil)))))))))
+		 (cl--set-buffer-substring (org-element-property :begin hl)
+					   (org-element-property :end hl)
+					   (s-format "[${=KEY=}] ${AUTHOR}. ${TITLE}. https://dx.doi.org/${DOI}\n\n"
+						     (lambda (arg &optional extra)
+						       (let ((entry (org-element-property (intern-soft (concat ":"arg)) hl)))
+							 (substring
+							  entry
+							  (if (s-starts-with? "{" entry) 1 0)
+							  (if (s-ends-with? "}" entry) -1 nil)))))))))
 
     (setq buf (ox-ipynb-export-to-buffer))
     (with-current-buffer buf
