@@ -147,6 +147,10 @@
 They are reverse-engineered from existing notebooks.")
 
 
+(defvar ox-ipynb-footnote-definitions nil
+  "List for footnote definitions.")
+
+
 (defun ox-ipynb-insert-slide (type)
   "Insert the attribute line for a slide TYPE."
   (interactive (list (completing-read "Type: " '(slide subslide fragment notes skip))))
@@ -558,12 +562,32 @@ nil:END:"  nil t)
   ;; preprocess some org-elements that need to be exported to strings prior to
   ;; the rest. This is not complete. Do these in reverse so the buffer positions
   ;; don't get changed in the parse tree.
+  ;; ** footnotes
+  (mapc (lambda (elm)
+	  (cl--set-buffer-substring (org-element-property :begin elm)
+				    (org-element-property :end elm)
+				    (format "<a href=\"#%s\">[%s]</a>"
+					    (org-element-property :label elm)
+					    (org-element-property :label elm))))
+	(reverse (org-element-map (org-element-parse-buffer) 'footnote-reference 'identity)))
+  
+  (mapc (lambda (elm)
+	  (cl--set-buffer-substring (org-element-property :begin elm)
+				    (org-element-property :end elm)
+				    (format "<p id=\"%s\">[%s] %s"
+					    (org-element-property :label elm)
+					    (org-element-property :label elm)
+					    (buffer-substring (org-element-property :contents-begin elm)
+							      (org-element-property :contents-end elm))))) 
+	(reverse (org-element-map (org-element-parse-buffer) 'footnote-definition 'identity)))
+
+  ;; ** quote blocks
   (mapc (lambda (elm)
           (cl--set-buffer-substring (org-element-property :begin elm)
 				    (org-element-property :end elm)
 				    (org-md-quote-block elm
 							(buffer-substring
-							 (org-element-property :contents-begin elm)
+							 b		 (org-element-property :contents-begin elm)
 							 (org-element-property :contents-end elm))
 							nil)))
         (reverse (org-element-map (org-element-parse-buffer) 'quote-block 'identity)))
