@@ -23,17 +23,12 @@ See [[./ipynb-slideshow.org]] to see how to make a slideshow out an org-file.
 
 It is probably possible to add new languages  by adding to the variables =ox-ipynb-kernelspecs= and =ox-ipynb-language-infos=. These were reverse-engineered to make the json metadata. I do not know what the minimal setup for this is required and suggest adapting these variables by example.
 
-* Extract ox-ipynb from scimax
+** Adding scientific references
 
-This block is adapted from http://www.pixelite.co.nz/article/extracting-file-folder-from-git-repository-with-full-git-history/
-#+BEGIN_SRC sh
-cd /Users/jkitchin/vc/jkitchin-github/scimax
-git log --pretty=email --patch-with-stat --reverse --full-index --binary -- ox-ipynb.el > /tmp/patch
+You can use [[https://github.com/jkitchin/org-ref][org-ref]] to add scientific references. To make it work, you should set this variable.
 
-mkdir /Users/jkitchin/vc/jkitchin-github/ox-ipynb
-cd /Users/jkitchin/vc/jkitchin-github/ox-ipynb
-git init
-git am < /tmp/patch
+#+BEGIN_SRC emacs-lisp
+(setq ox-ipynb-preprocess-hook '((lambda () (org-ref-csl-preprocess-buffer 'html))))
 #+END_SRC
 
-#+RESULTS:
+Then the citations and bibliography will be replaced by CSL rendered citations.
