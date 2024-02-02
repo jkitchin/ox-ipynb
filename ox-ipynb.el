@@ -147,10 +147,6 @@
 They are reverse-engineered from existing notebooks.")
 
 
-(defvar ox-ipynb-footnote-definitions nil
-  "List for footnote definitions.")
-
-
 (defun ox-ipynb-insert-slide (type)
   "Insert the attribute line for a slide TYPE."
   (interactive (list (completing-read "Type: " '(slide subslide fragment notes skip))))
