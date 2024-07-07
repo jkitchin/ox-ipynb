@@ -93,6 +93,9 @@
                                (R . (kernelspec . ((display_name . "R")
                                                    (language . "R")
                                                    (name . "ir"))))
+			       (jupyter-R . (kernelspec . ((display_name . "R")
+							   (language . "R")
+							   (name . "ir"))))
                                (julia . (kernelspec . ((display_name . "Julia 0.6.0")
                                                        (language . "julia")
                                                        (name . "julia-0.6"))))
@@ -142,7 +145,13 @@
                            (mimetype . "text/x-r-source")
                            (name . "R")
                            (pygments_lexer . "r")
-                           (version . "3.3.2")))))
+                           (version . "3.3.2"))))
+    (jupyter-R . (language_info . ((codemirror_mode . "r")
+				   (file_extension . ".r")
+				   (mimetype . "text/x-r-source")
+				   (name . "R")
+				   (pygments_lexer . "r")
+				   (version . "3.3.2")))))
   "These get injected into notebook metadata.
 They are reverse-engineered from existing notebooks.")
 
@@ -252,6 +261,7 @@ The cdr of SRC-RESULT is the end position of the results."
 
     `((cell_type . "code")
       (execution_count . 1)
+      (id . ,(org-id-uuid))
       ;; the hashtable trick converts to {} in json. jupyter can't take a null here.
       (metadata . ,src-metadata)
       (outputs . ,(if (null output-cells)
@@ -409,10 +419,12 @@ version was incorrectly modifying them."
 	(if attachments
 	    `((attachments . ,attachments)
 	      (cell_type . "markdown")
+	      (id . ,(org-id-uuid))
 	      (metadata . ,(or metadata (make-hash-table)))
 	      (source . ,(vconcat
 			  (list md))))
 	  `((cell_type . "markdown")
+	    (id . ,(org-id-uuid))
 	    (metadata . ,(or metadata (make-hash-table)))
 	    (source . ,(vconcat
 			(list md)))))
@@ -468,6 +480,7 @@ html I think. That is not currently supported.
                             (or value "")))))
     (when keywords
       `((cell_type . "markdown")
+	(id . ,(org-id-uuid))
         (metadata . ,(make-hash-table))
         (source . ,(vconcat keywords))))))
 
@@ -758,7 +771,7 @@ nil:END:"  nil t)
                 `((cells . ,(reverse cells)))
                 (list metadata)
                 '((nbformat . 4)
-                  (nbformat_minor . 0))))
+                  (nbformat_minor . 5))))
 
     data))
 
