@@ -181,11 +181,18 @@ The cdr of SRC-RESULT is the end position of the results."
          html
          latex
 	 md)
-
-    ;; Handle inline images first
-    (while (string-match "\\[\\[file:\\(.*?\\)\\]\\]" (or results "") start)
+    
+    ;; Handle inline images first This is a clunky solution, using pattern
+    ;; matching. Another option might be parsing the string and map over the
+    ;; file links? It looks like I used to rely on these being file links, but
+    ;; new versions of jupyter-emacs don't use file (or I patched that myself).
+    (while (string-match org-any-link-re (or results ""))
+      ;; while (string-match "\\[\\[\\(?:file:\\)?\\(.*?\\)\\]\\]" (or results "") start)
       (setq start (match-end 0))
-      (setq img-path (match-string 1 results)
+      (setq img-path (match-string 2 results)
+	    ;; We delete the thing we found if it is an image
+	    results (when (image-supported-file-p img-path)
+		      (replace-match "" nil nil results))
             img-data (base64-encode-string
                       (encode-coding-string
 		       (if (file-exists-p img-path)
@@ -202,10 +209,7 @@ The cdr of SRC-RESULT is the end position of the results."
 				("text/plain" . "<matplotlib.figure.Figure>")))
 		       (metadata . ,(make-hash-table))
 		       (output_type . "display_data"))))))
-    ;; now remove the inline images and put the results in.
-    (setq results (s-trim (replace-regexp-in-string "\\[\\[file:\\(.*?\\)\\]\\]" ""
-                                                    (or results ""))))
-
+    
     ;; Check for HTML cells. I think there can only be one I don't know what the
     ;; problem is, but I can't get the match-end functions to work correctly
     ;; here. Its like the match-data is not getting updated.
@@ -656,6 +660,7 @@ nil:END:"  nil t)
 	  (setq title_string (format "%s**Date:** %s\n\n" title_string date)))
 
 	(push `((cell_type . "markdown")
+		(id . ,(org-id-uuid))
 		(metadata . ,(make-hash-table))
 		(source . ,title_string))
 	      cells)))
