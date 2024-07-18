@@ -256,10 +256,10 @@ The cdr of SRC-RESULT is the end position of the results."
 			    (output_type . "display_data")))))
 
     ;; output cells
-    (unless (string= "" results)
+    (unless (or (string= "" results) (null results))
       (setq output-cells (append `(((name . "stdout")
-                                    (output_type . "stream")
-                                    (text . ,results)))
+				    (output_type . "stream")
+				    (text . ,results)))
                                  output-cells)))
 
 
