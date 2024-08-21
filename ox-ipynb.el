@@ -600,7 +600,7 @@ nil:END:"  nil t)
 				    (org-element-property :end elm)
 				    (org-md-quote-block elm
 							(buffer-substring
-							 b		 (org-element-property :contents-begin elm)
+							 (org-element-property :contents-begin elm)
 							 (org-element-property :contents-end elm))
 							nil)))
         (reverse (org-element-map (org-element-parse-buffer) 'quote-block 'identity)))
