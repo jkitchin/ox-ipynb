@@ -936,13 +936,9 @@ This is usually run as a function in `ox-ipynb-preprocess-hook'."
 This is not specific
 This is usually run as a function in `ox-ipynb-preprocess-hook'."
   (org-babel-map-src-blocks nil
-    (let* ((src (org-element-context))
-	   (ipynb-attr (org-element-property :attr_ipynb src))
-	   remove)
-      (when (and ipynb-attr)
-	(setq remove (cdr (assoc 'remove (cadr (read (concat "(" (car ipynb-attr) ")"))))))
-	(when remove
-	  (cl--set-buffer-substring (org-element-property :begin src) (org-element-property :end src) ""))))))
+    (let* ((src (org-element-context)))
+      (when (plist-get (org-export-read-attribute :attr_ipynb src) :remove)
+	(cl--set-buffer-substring (org-element-property :begin src) (org-element-property :end src) "")))))
 
 
 ;; * export menu
