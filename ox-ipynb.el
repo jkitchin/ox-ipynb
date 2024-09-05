@@ -920,7 +920,7 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
   "Delete all SOLUTION regions.
 This is usually run as a function in `ox-ipynb-preprocess-hook'."
   (goto-char (point-max))
-  (while (re-search-backward "^### BEGIN SOLUTION\\(.\\|\n\\)*?### END SOLUTION" nil t)
+  (while (re-search-backward "### BEGIN SOLUTION\\(.\\|\n\\)*?### END SOLUTION" nil t)
     (cl--set-buffer-substring (match-beginning 0) (match-end 0) "")))
 
 
@@ -928,8 +928,9 @@ This is usually run as a function in `ox-ipynb-preprocess-hook'."
   "Delete all HIDDEN regions.
 This is usually run as a function in `ox-ipynb-preprocess-hook'."
   (goto-char (point-max))
-  (while (re-search-backward "^### BEGIN HIDDEN\\(.\\|\n\\)*?### END HIDDEN" nil t)
+  (while (re-search-backward "### BEGIN HIDDEN\\(.\\|\n\\)*?### END HIDDEN" nil t)
     (cl--set-buffer-substring (match-beginning 0) (match-end 0) "")))
+
 
 (defun ox-ipynb-remove-remove ()
   "Delete all cells with remove in the metadata.
