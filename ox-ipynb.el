@@ -552,6 +552,7 @@ Empty strings are eliminated."
 
 
 (defun ox-ipynb-export-to-buffer-data ()
+  
   ;; This is a hack to remove empty Results. I think this is a bug in org-mode,
   ;; that it exports empty results to have a nil in them without a \n, which
   ;; causes this exporter to fail to find them.
@@ -922,7 +923,7 @@ This is usually run as a function in `ox-ipynb-preprocess-hook'."
   (interactive)
   (goto-char (point-max))
   ;;(while (re-search-backward "### BEGIN SOLUTION\\(.\\|\n\\)*?### END SOLUTION" nil t)
-  (while (re-search-backward "#.*{{{\\(.\\|\n\\)*?}}}" nil t)
+  (while (re-search-backward "#.*{{{\\(.\\|\n\\)*?# }}}" nil t)
     (cl--set-buffer-substring (match-beginning 0) (match-end 0) "#+begin_src jupyter-python\n#+end_src")))
 
 
