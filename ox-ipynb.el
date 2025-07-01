@@ -923,7 +923,7 @@ This is usually run as a function in `ox-ipynb-preprocess-hook'."
   (interactive)
   (goto-char (point-max))
   ;;(while (re-search-backward "### BEGIN SOLUTION\\(.\\|\n\\)*?### END SOLUTION" nil t)
-  (while (re-search-backward "#.*{{{\\(.\\|\n\\)*?# }}}" nil t)
+  (while (re-search-backward "# {{{\\(.\\|\n\\)*?# }}}" nil t)
     (cl--set-buffer-substring (match-beginning 0) (match-end 0) "#+begin_src jupyter-python\n#+end_src")))
 
 
@@ -1102,12 +1102,28 @@ Optional argument INFO is a plist of options."
 								     ox-ipynb-remove-remove))))
     (ox-ipynb-export-to-ipynb-file)))
 
+(defun ox-ipynb-export-to-ipynb-file-instructor (&optional async subtreep visible-only body-only info)
+  "Export current buffer to a participant file and open it.
+Removes SOLUTION and HIDDEN regions.
+Optional argument ASYNC to asynchronously export.
+Optional argument SUBTREEP to export current subtree.
+Optional argument VISIBLE-ONLY to only export visible content.
+Optional argument BODY-ONLY export only the body.
+Optional argument INFO is a plist of options."
+  (let ((ox-ipynb-preprocess-hook
+	 (append ox-ipynb-preprocess-hook
+		 '(ss/ox-highlight-solutions
+		   ox-ipynb-remove-hidden
+		   ox-ipynb-remove-remove))))
+    (ox-ipynb-export-to-ipynb-file)))
+
 
 (org-export-define-derived-backend 'jupyter-notebook 'org
   :menu-entry
   '(?n "Export to jupyter notebook"
        ((?b "to buffer" ox-ipynb-export-to-ipynb-buffer)
         (?n "to notebook" ox-ipynb-export-to-ipynb-file)
+	(?k "to instructor key nb" ox-ipynb-export-to-ipynb-file-instructor)
 	(?o "to notebook and open" ox-ipynb-export-to-ipynb-file-and-open)
 	(?p "to participant nb" ox-ipynb-export-to-participant-notebook)
         (?r "to nb (no results) and open" ox-ipynb-export-to-ipynb-no-results-file-and-open)
