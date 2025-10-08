@@ -30,9 +30,9 @@
 ;; The export language is determined by the first cell. If the first cell is not
 ;; the notebook language, e.g. because you use a shell block for some reason,
 ;; you can specify the language with a keyword like this:
-;; 
+;;
 ;; #+OX-IPYNB-LANGUAGE: jupyter-python
-;; 
+;;
 ;; It is possible to set metadata at the notebook level using
 ;; #+ox-ipynb-keyword-metadata: key1 key2
 ;; This will use store key:value pairs in
@@ -174,14 +174,14 @@ The cdr of SRC-RESULT is the end position of the results."
          img-path img-data
          (start 0)
          end
-	 (src-metadata (or (when-let (smd (plist-get  (cadr src-block) :attr_ipynb))
+	 (src-metadata (or (when-let* ((smd (plist-get  (cadr src-block) :attr_ipynb)))
 			     (read (format "(%s)" (s-join " " smd))))
 			   (make-hash-table)))
          block-start block-end
          html
          latex
 	 md)
-    
+
     ;; Handle inline images first This is a clunky solution, using pattern
     ;; matching. Another option might be parsing the string and map over the
     ;; file links? It looks like I used to rely on these being file links, but
@@ -209,7 +209,7 @@ The cdr of SRC-RESULT is the end position of the results."
 				("text/plain" . "<matplotlib.figure.Figure>")))
 		       (metadata . ,(make-hash-table))
 		       (output_type . "display_data"))))))
-    
+
     ;; Check for HTML cells. I think there can only be one I don't know what the
     ;; problem is, but I can't get the match-end functions to work correctly
     ;; here. Its like the match-data is not getting updated.
@@ -383,7 +383,7 @@ version was incorrectly modifying them."
 
 			  ;; There are leading and trailing \n. strip off for the next step.
 			  (setq contents (string-trim contents))
-			  
+
 			  (let ((lines (split-string contents "\n")))
 			    (when (string-prefix-p "|-" (nth 0 lines))
 			      (setq lines (cdr lines)))
@@ -583,7 +583,7 @@ nil:END:"  nil t)
 					    (org-element-property :label elm)
 					    (org-element-property :label elm))))
 	(reverse (org-element-map (org-element-parse-buffer) 'footnote-reference 'identity)))
-  
+
   (mapc (lambda (elm)
 	  (cl--set-buffer-substring (org-element-property :begin elm)
 				    (org-element-property :end elm)
@@ -591,7 +591,7 @@ nil:END:"  nil t)
 					    (org-element-property :label elm)
 					    (org-element-property :label elm)
 					    (buffer-substring (org-element-property :contents-begin elm)
-							      (org-element-property :contents-end elm))))) 
+							      (org-element-property :contents-end elm)))))
 	(reverse (org-element-map (org-element-parse-buffer) 'footnote-definition 'identity)))
 
   ;; ** quote blocks
@@ -726,7 +726,7 @@ nil:END:"  nil t)
             (cl-loop for s in (ox-ipynb-split-text text)
                      unless (string= "" (s-trim s))
                      do
-                     (when-let ((md (ox-ipynb-export-markdown-cell s)))
+                     (when-let* ((md (ox-ipynb-export-markdown-cell s)))
                        (push md cells)))))
       ;; this is a special case where there are no source blocks, and the whole
       ;; document is a markdown cell.
@@ -734,7 +734,7 @@ nil:END:"  nil t)
         (cl-loop for s in (ox-ipynb-split-text text)
 		 unless (string= "" (s-trim s))
 		 do
-		 (when-let ((md (ox-ipynb-export-markdown-cell s)))
+		 (when-let* ((md (ox-ipynb-export-markdown-cell s)))
                    (push md cells)))))
 
     (while current-source
@@ -762,14 +762,14 @@ nil:END:"  nil t)
               (cl-loop for s in (ox-ipynb-split-text text)
                        unless (string= "" s)
                        do
-                       (when-let ((md (ox-ipynb-export-markdown-cell (s-trim s))))
+                       (when-let* ((md (ox-ipynb-export-markdown-cell (s-trim s))))
 			 (push md cells)))))
         ;; on last block so add rest of document
         (let ((text (buffer-substring-no-properties end (point-max))))
           (cl-loop for s in (ox-ipynb-split-text text)
                    unless (string= "" s)
                    do
-                   (when-let ((md (ox-ipynb-export-markdown-cell (s-trim s))))
+                   (when-let* ((md (ox-ipynb-export-markdown-cell (s-trim s))))
                      (push md cells))))))
 
     (setq data (append
