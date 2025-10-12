@@ -6,7 +6,7 @@
 ;; URL: https://github.com/jkitchin/ox-ipynb/ox-ipynb.el
 ;; Version: 0.1
 ;; Keywords: org-mode
-;; Package-Requires: ((emacs "25") (org "8.2") (s "1.10.0"))
+;; Package-Requires: ((emacs "25") (org "8.2"))
 
 ;; This file is not currently part of GNU Emacs.
 
@@ -75,15 +75,53 @@
 (require 'cl-lib)
 (require 'ox-md)
 (require 'ox-org)
-(require 's)
 (require 'json)
-(require 'dash)
 
 (unless (string-match "^9\\.[2-9][\\.0-9]*" (org-version))
   (warn "org 9.2+ is required for `ox-ipynb'. Earlier versions do not currently work."))
 
+;; Helper functions to replace s.el functionality
+(defun ox-ipynb--index-of (needle haystack &optional start)
+  "Find the index of NEEDLE in HAYSTACK starting at START (default 0).
+Returns nil if not found."
+  (let ((pos (string-match (regexp-quote needle) haystack start)))
+    pos))
+
+(defun ox-ipynb--count-matches (regexp s)
+  "Count occurrences of REGEXP in string S."
+  (let ((count 0)
+        (pos 0))
+    (while (string-match regexp s pos)
+      (setq count (1+ count)
+            pos (match-end 0)))
+    count))
+
+(defun ox-ipynb--slice-at (regexp s)
+  "Split string S at each match of REGEXP, keeping delimiters with following parts."
+  (let ((parts '())
+        (start 0)
+        (pos 0))
+    (while (string-match regexp s pos)
+      (when (> (match-beginning 0) start)
+        (push (substring s start (match-beginning 0)) parts))
+      (setq start (match-beginning 0)
+            pos (match-end 0)))
+    (when (< start (length s))
+      (push (substring s start) parts))
+    (nreverse parts)))
+
+(defun ox-ipynb--format (template replacer-fn)
+  "Replace ${VAR} placeholders in TEMPLATE using REPLACER-FN.
+REPLACER-FN is called with the variable name (without ${}) and should return the replacement string."
+  (replace-regexp-in-string
+   "\\${\\([^}]+\\)}"
+   (lambda (match)
+     (funcall replacer-fn (match-string 1 match)))
+   template))
+
 (defcustom ox-ipynb-preprocess-hook '()
   "Hook variable to apply to a copy of the buffer before exporting."
+  :type 'hook
   :group 'ox-ipynb)
 
 
@@ -175,7 +213,7 @@ The cdr of SRC-RESULT is the end position of the results."
          (start 0)
          end
 	 (src-metadata (or (when-let* ((smd (plist-get  (cadr src-block) :attr_ipynb)))
-			     (read (format "(%s)" (s-join " " smd))))
+			     (read (format "(%s)" (string-join smd " "))))
 			   (make-hash-table)))
          block-start block-end
          html
@@ -214,11 +252,11 @@ The cdr of SRC-RESULT is the end position of the results."
     ;; problem is, but I can't get the match-end functions to work correctly
     ;; here. Its like the match-data is not getting updated.
     (when (string-match "#\\+BEGIN_EXPORT HTML" (or results ""))
-      (setq block-start (s-index-of "#+BEGIN_EXPORT HTML" results)
+      (setq block-start (ox-ipynb--index-of "#+BEGIN_EXPORT HTML" results)
             start (+ block-start (length "#+BEGIN_EXPORT HTML\n")))
 
       ;; Now, get the end of the block.
-      (setq end (s-index-of "#+END_EXPORT" results)
+      (setq end (ox-ipynb--index-of "#+END_EXPORT" results)
             block-end (+ end (length "#+END_EXPORT")))
 
       (setq html (substring results start end))
@@ -235,11 +273,11 @@ The cdr of SRC-RESULT is the end position of the results."
 
     ;; Handle latex cells
     (when (string-match "#\\+BEGIN_EXPORT latex" (or results ""))
-      (setq block-start (s-index-of "#+BEGIN_EXPORT latex" results)
+      (setq block-start (ox-ipynb--index-of "#+BEGIN_EXPORT latex" results)
             start (+ block-start (length "#+BEGIN_EXPORT latex\n")))
 
       ;; Now, get the end of the block.
-      (setq end (s-index-of "#+END_EXPORT" results)
+      (setq end (ox-ipynb--index-of "#+END_EXPORT" results)
             block-end (+ end (length "#+END_EXPORT")))
 
       (setq latex (substring results start end))
@@ -274,7 +312,7 @@ The cdr of SRC-RESULT is the end position of the results."
                       (vector)
                     (vconcat output-cells)))
       (source . ,(vconcat
-                  (list (s-trim (car (org-export-unravel-code src-block)))))))))
+                  (list (string-trim (car (org-export-unravel-code src-block)))))))))
 
 
 (defun ox-ipynb-filter-latex-fragment (text _ _)
@@ -297,7 +335,7 @@ This only fixes file links with no description I think.
 [2019-08-11 Sun] added a small additional condition to not change
 text starting with <sup. These are citations, and the previous
 version was incorrectly modifying them."
-  (if (and (s-starts-with? "<" text) (not (s-starts-with? "<sup" text)))
+  (if (and (string-prefix-p "<" text) (not (string-prefix-p "<sup" text)))
       (let ((path (substring text 1 -1)))
 	(format "[%s](%s)" path path))
     text))
@@ -375,7 +413,7 @@ version was incorrectly modifying them."
 		       ;; Tables are kind of special. I want a markdown rendering, not html.
 		       ((symbol-function 'org-html-table-cell)
 			(lambda (table-cell contents info)
-			  (s-concat  (org-trim (or contents "")) "|")))
+			  (concat  (org-trim (or contents "")) "|")))
 		       ((symbol-function 'org-html-table-row) 'ox-ipynb--export-table-row)
 		       ((symbol-function 'org-html-table)
 			(lambda (_ contents info)
@@ -419,7 +457,7 @@ version was incorrectly modifying them."
     (when (string-match ":metadata: *\\(.*\\)" s)
       (setq metadata (read (format "(%s)" (match-string 1 s)))))
 
-    (if (not (string= "" (s-trim md)))
+    (if (not (string= "" (string-trim md)))
 	(if attachments
 	    `((attachments . ,attachments)
 	      (cell_type . "markdown")
@@ -455,7 +493,7 @@ html I think. That is not currently supported.
      ((eq (org-element-property :type table-row) 'rule)
       (setq contents (buffer-substring (org-element-property :begin table-row)
 				       (org-element-property :end table-row)))
-      (setq ncolumns (+ (s-count-matches "+" contents) 1))
+      (setq ncolumns (+ (ox-ipynb--count-matches "+" contents) 1))
       (if (= 1 ncolumns)
 	  "|---|"
 	(concat "|---" (cl-loop for i to (- ncolumns 2) concat "|---") "|"))))))
@@ -516,7 +554,7 @@ those exist, default to ipython."
   "Given a string S, split it into substrings.
 Each heading is its own string. Also, split on #+ipynb-newcell and #+attr_ipynb.
 Empty strings are eliminated."
-  (let* ((s1 (s-slice-at org-heading-regexp s))
+  (let* ((s1 (ox-ipynb--slice-at org-heading-regexp s))
          ;; split headers out
          (s2 (cl-loop for string in s1
                    append
@@ -526,9 +564,9 @@ Empty strings are eliminated."
 			 ;; The first one is definitely the heading. We may also
 			 ;; need properties.
 			 (setq heading (pop si))
-			 (when (and si (s-matches? ":PROPERTIES:" (car si)))
+			 (when (and si (string-match-p ":PROPERTIES:" (car si)))
 			   (setq heading (concat "\n" heading (pop si) "\n"))
-			   (while (not (s-matches? ":END:" (car si)))
+			   (while (not (string-match-p ":END:" (car si)))
 			     (setq heading (concat heading (pop si) "\n")))
 			   (setq heading (concat heading (pop si) "\n")))
                          (list heading
@@ -708,7 +746,7 @@ nil:END:"  nil t)
 								  result-content)))
                                    ;; the results and the end of the results.
                                    ;; we use the end later to move point.
-                                   (cons (s-trim result-content) end)))))))
+                                   (cons (string-trim result-content) end)))))))
                    collect
                    (cons src result)))
 
@@ -716,7 +754,7 @@ nil:END:"  nil t)
 
     ;; First block before a src is markdown, unless it happens to be empty.
     (if (car current-source)
-        (unless (string= "" (s-trim
+        (unless (string= "" (string-trim
                              (buffer-substring-no-properties
                               (point-min)
                               (org-element-property :begin (car current-source)))))
@@ -724,7 +762,7 @@ nil:END:"  nil t)
                        (point-min)
                        (org-element-property :begin (car current-source)))))
             (cl-loop for s in (ox-ipynb-split-text text)
-                     unless (string= "" (s-trim s))
+                     unless (string= "" (string-trim s))
                      do
                      (when-let* ((md (ox-ipynb-export-markdown-cell s)))
                        (push md cells)))))
@@ -732,7 +770,7 @@ nil:END:"  nil t)
       ;; document is a markdown cell.
       (let ((text (buffer-substring-no-properties (point-min) (point-max))))
         (cl-loop for s in (ox-ipynb-split-text text)
-		 unless (string= "" (s-trim s))
+		 unless (string= "" (string-trim s))
 		 do
 		 (when-let* ((md (ox-ipynb-export-markdown-cell s)))
                    (push md cells)))))
@@ -751,7 +789,7 @@ nil:END:"  nil t)
       (setq current-source (pop src-results))
 
       (if current-source
-          (when (not (string= "" (s-trim (buffer-substring
+          (when (not (string= "" (string-trim (buffer-substring
                                           end
                                           (org-element-property
                                            :begin
@@ -762,14 +800,14 @@ nil:END:"  nil t)
               (cl-loop for s in (ox-ipynb-split-text text)
                        unless (string= "" s)
                        do
-                       (when-let* ((md (ox-ipynb-export-markdown-cell (s-trim s))))
+                       (when-let* ((md (ox-ipynb-export-markdown-cell (string-trim s))))
 			 (push md cells)))))
         ;; on last block so add rest of document
         (let ((text (buffer-substring-no-properties end (point-max))))
           (cl-loop for s in (ox-ipynb-split-text text)
                    unless (string= "" s)
                    do
-                   (when-let* ((md (ox-ipynb-export-markdown-cell (s-trim s))))
+                   (when-let* ((md (ox-ipynb-export-markdown-cell (string-trim s))))
                      (push md cells))))))
 
     (setq data (append
@@ -804,7 +842,7 @@ nil:END:"  nil t)
   `org-export-ignore-headlines'."
   (goto-char (point-min))
   (while (re-search-forward org-heading-regexp nil 'mv)
-    (when (-contains? (org-get-tags) "ignore")
+    (when (member "ignore" (org-get-tags))
       (save-restriction
 	(org-narrow-to-subtree)
 	;; first remove headline and properties.
@@ -845,7 +883,7 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 	      (reverse
 	       (org-element-map (org-element-parse-buffer) 'headline
 		 (lambda (hl)
-		   (when (-intersection (org-get-tags
+		   (when (cl-intersection (org-get-tags
 					 (org-element-property :begin hl) t)
 					exclude-tags)
 		     hl))))
@@ -862,11 +900,11 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 	  (hls (reverse
 		(org-element-map (org-element-parse-buffer) 'headline
 		  (lambda (hl)
-		    (when (-intersection (org-get-tags
+		    (when (cl-intersection (org-get-tags
 					  (org-element-property :begin hl))
 					 select-tags)
 		      (setq found t))
-		    (unless (-intersection (org-get-tags
+		    (unless (cl-intersection (org-get-tags
 					    (org-element-property :begin hl) t)
 					   select-tags)
 		      hl))))))
@@ -988,13 +1026,13 @@ Optional argument INFO is a plist of options."
 		 do
 		 (cl--set-buffer-substring (org-element-property :begin hl)
 					   (org-element-property :end hl)
-					   (s-format "[${=KEY=}] ${AUTHOR}. ${TITLE}. https://dx.doi.org/${DOI}\n\n"
+					   (ox-ipynb--format "[${=KEY=}] ${AUTHOR}. ${TITLE}. https://dx.doi.org/${DOI}\n\n"
 						     (lambda (arg &optional extra)
 						       (let ((entry (org-element-property (intern-soft (concat ":"arg)) hl)))
 							 (substring
 							  entry
-							  (if (s-starts-with? "{" entry) 1 0)
-							  (if (s-ends-with? "}" entry) -1 nil)))))))))
+							  (if (string-prefix-p "{" entry) 1 0)
+							  (if (string-suffix-p "}" entry) -1 nil)))))))))
 
     (setq buf (ox-ipynb-export-to-buffer))
     (with-current-buffer buf
