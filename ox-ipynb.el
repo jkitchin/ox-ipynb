@@ -1,12 +1,12 @@
 ;;; ox-ipynb.el --- Convert an org-file to an ipynb.  -*- lexical-binding: t; -*-
 
-;; Copyright(C) 2017 John Kitchin
+;; Copyright(C) 2017-2025 John Kitchin
 
 ;; Author: John Kitchin <jkitchin@andrew.cmu.edu>
 ;; URL: https://github.com/jkitchin/ox-ipynb/ox-ipynb.el
 ;; Version: 0.1
 ;; Keywords: org-mode
-;; Package-Requires: ((emacs "25") (org "8.2"))
+;; Package-Requires: ((emacs "30") (org "9.7"))
 
 ;; This file is not currently part of GNU Emacs.
 
@@ -228,6 +228,11 @@ The cdr of SRC-RESULT is the end position of the results."
       ;; while (string-match "\\[\\[\\(?:file:\\)?\\(.*?\\)\\]\\]" (or results "") start)
       (setq start (match-end 0))
       (setq img-path (match-string 2 results)
+	    ;; org-any-link-re returns e.g. "file:./foo.png"; normalize so
+	    ;; file predicates operate on actual paths instead of URIs.
+	    img-path (if (and img-path (string-prefix-p "file:" img-path))
+			 (substring img-path 5)
+		   img-path)
 	    ;; We delete the thing we found if it is an image
 	    results (when (image-supported-file-p img-path)
 		      (replace-match "" nil nil results))
@@ -344,6 +349,9 @@ version was incorrectly modifying them."
 (defvar ox-ipynb-images '()
   "alist of paths and b64 encoded data for inline images.")
 
+(defvar ox-ipynb--toc-content nil
+  "Cached Table of Contents text for deduplication during export.")
+
 ;; This is an org-link to get inlined images from the file system. This makes
 ;; the notebook bigger, but more portable.
 (org-link-set-parameters "image"
@@ -382,6 +390,18 @@ version was incorrectly modifying them."
 
 (defun ox-ipynb-export-markdown-cell (s)
   "Return the markdown cell for the string S."
+  ;; Filter out redundant TOC cells. We drop the empty ones that
+  ;; occasionally show up, and any copy that matches the generated TOC
+  ;; block we inject later.
+  (when (and (string-match "Table of Contents" s))
+    (let ((trimmed-s (string-trim s)))
+      (cond
+       ((and ox-ipynb--toc-content
+             (string= trimmed-s ox-ipynb--toc-content))
+        (setq s ""))
+       ((not (string-match "\\[.*\\](#.*)" s))
+        (setq s "")))))
+
   (let* ((org-export-filter-latex-fragment-functions '(ox-ipynb-filter-latex-fragment))
          (org-export-filter-link-functions '(ox-ipynb-filter-link))
          ;; I overwrite the org function here because it does not give the right
@@ -434,19 +454,28 @@ version was incorrectly modifying them."
 
 			  ;; finally, it looks like there are double line returns we
 			  ;; replace here.
-			  (replace-regexp-in-string "\n\n" "\n" (or contents "")))))
+         (replace-regexp-in-string "\n\n" "\n" (or contents "")))))
                (org-export-string-as
                 s
                 'md t '(:with-toc nil :with-tags nil))))
-	 (pos 0)
+ 	 (pos -1)
 	 (attachments '())
 	 metadata)
+
+    (when (and (string-match "Table of Contents" md))
+      (let ((trimmed-md (string-trim md)))
+        (cond
+         ((and ox-ipynb--toc-content
+               (string= trimmed-md ox-ipynb--toc-content))
+          (setq md ""))
+         ((not (string-match "\\[.*\\](#.*)" md))
+          (setq md "")))))
 
     ;; we need to do some work to make images inlined for portability.
     (while (setq pos (string-match "(attachment:\\(.*\\))" md (+ 1 pos)))
       (push  (list (match-string 1 md)
-		   (list "image/png" (cdr (assoc (match-string 1 md) ox-ipynb-images))))
-	     attachments))
+ 		   (list "image/png" (cdr (assoc (match-string 1 md) ox-ipynb-images))))
+ 	     attachments))
 
     ;; metadata handling, work on the original string since the attr line is
     ;; gone from the export
@@ -525,6 +554,41 @@ html I think. That is not currently supported.
 	(id . ,(org-id-uuid))
         (metadata . ,(make-hash-table))
         (source . ,(vconcat keywords))))))
+
+
+(defun ox-ipynb--jupyter-anchor (title)
+  "Generate anchor ID  for TITLE."
+  (let ((s title))
+    ;; First replace spaces with hyphens
+    (setq s (replace-regexp-in-string " " "-" s))
+    ;; Then remove all non-alphanumeric except hyphens
+    (replace-regexp-in-string "[^a-z0-9-]" "" s)))
+
+
+(defun ox-ipynb--build-toc (info &optional n)
+  "Build a table of contents for ipynb export.
+INFO is a plist used as a communication channel.
+Optional argument N, when non-nil, is an integer specifying the depth of the table."
+  (let ((headlines (org-export-collect-headlines info n)))
+    (when headlines
+      (concat
+       "## Table of Contents\n\n"
+       (mapconcat
+        (lambda (headline)
+          (let* ((level (org-export-get-relative-level headline info))
+                 (indentation (make-string (* 4 (1- level)) ?\s))
+                 (title (org-export-data-with-backend
+                         (org-export-get-alt-title headline info)
+                         (org-export-toc-entry-backend 'md)
+                         info))
+                 ;; Use CUSTOM_ID if set, otherwise generate Jupyter-style anchor
+                 (anchor (or (org-element-property :CUSTOM_ID headline)
+                             (ox-ipynb--jupyter-anchor
+                              (org-element-property :raw-value headline)))))
+            (format "%s- [%s](#%s)" indentation title anchor)))
+        headlines
+        "\n")
+       "\n"))))
 
 
 (defun ox-ipynb-get-language ()
@@ -656,7 +720,8 @@ nil:END:"  nil t)
 
 
   ;; Now we parse the buffer.
-  (let* ((cells '())
+  (let* ((ox-ipynb--toc-content nil)
+         (cells '())
          (ox-ipynb-language (ox-ipynb-get-language))
          (metadata `(metadata . ((org . ,(let* ((all-keywords (org-element-map (org-element-parse-buffer)
                                                                   'keyword
@@ -706,6 +771,25 @@ nil:END:"  nil t)
     ;; Next keyword cells
     (let ((kws (ox-ipynb-export-keyword-cell)))
       (when kws (push kws cells)))
+
+    ;; Add table of contents if requested
+    (let* ((export-options (org-export--get-inbuffer-options))
+           (with-toc (plist-get export-options :with-toc)))
+      (when with-toc
+        (let* ((tree (org-element-parse-buffer))
+               (info (org-combine-plists
+                      export-options
+                      (org-export-get-environment 'md)
+                      (list :parse-tree tree)))
+               (toc-depth (if (wholenump with-toc) with-toc nil))
+               (toc-content (ox-ipynb--build-toc info toc-depth)))
+          (when toc-content
+            (setq ox-ipynb--toc-content (string-trim toc-content))
+            (push `((cell_type . "markdown")
+                    (id . ,(org-id-uuid))
+                    (metadata . ,(make-hash-table))
+                    (source . ,toc-content))
+                  cells)))))
 
     (setq src-blocks (org-element-map (org-element-parse-buffer) 'src-block
                        (lambda (src)
@@ -856,9 +940,6 @@ nil:END:"  nil t)
 	  (org-promote))))))
 
 
-(add-hook 'ox-ipynb-preprocess-hook 'ox-ipynb-preprocess-ignore)
-
-
 (defun ox-ipynb-preprocess-babel-calls ()
   "Process babel calls to remove them.
 They don't work well in the export."
@@ -868,7 +949,6 @@ They don't work well in the export."
 	   (delete-region (org-element-property :begin bc)
 			  (org-element-property :end bc))))
 
-(add-hook 'ox-ipynb-preprocess-hook 'ox-ipynb-preprocess-babel-calls)
 
 (defun ox-ipynb-export-to-buffer ()
   "Export the current buffer to ipynb format in a buffer.
@@ -884,8 +964,8 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 	       (org-element-map (org-element-parse-buffer) 'headline
 		 (lambda (hl)
 		   (when (cl-intersection (org-get-tags
-					 (org-element-property :begin hl) t)
-					exclude-tags)
+					   (org-element-property :begin hl) t)
+					  exclude-tags)
 		     hl))))
 	      do
 	      (cl--set-buffer-substring (org-element-property :begin hl)
@@ -901,12 +981,12 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 		(org-element-map (org-element-parse-buffer) 'headline
 		  (lambda (hl)
 		    (when (cl-intersection (org-get-tags
-					  (org-element-property :begin hl))
-					 select-tags)
+					    (org-element-property :begin hl))
+					   select-tags)
 		      (setq found t))
 		    (unless (cl-intersection (org-get-tags
-					    (org-element-property :begin hl) t)
-					   select-tags)
+					      (org-element-property :begin hl) t)
+					     select-tags)
 		      hl))))))
      (when found
        (cl-loop for hl in hls
@@ -981,6 +1061,8 @@ This is usually run as a function in `ox-ipynb-preprocess-hook'."
 
 
 ;; * export menu
+
+
 (defun ox-ipynb-export-to-ipynb-buffer (&optional async subtreep visible-only
                                                   body-only info)
   "Export the current buffer to an ipynb in a new buffer.
@@ -989,11 +1071,22 @@ Optional argument SUBTREEP to export current subtree.
 Optional argument VISIBLE-ONLY to only export visible content.
 Optional argument BODY-ONLY export only the body.
 Optional argument INFO is a plist of options."
-  (let ((ipynb (ox-ipynb-notebook-filename))
+  (let ((ox-ipynb-preprocess-hook ox-ipynb-preprocess-hook)
+	(ipynb (ox-ipynb-notebook-filename))
 	(content (buffer-string))
         buf)
-    ;; (org-org-export-as-org async subtreep visible-only body-only info)
-    ;;    (with-current-buffer "*Org ORG Export*"
+
+    (add-hook 'ox-ipynb-preprocess-hook 'ox-ipynb-preprocess-ignore)
+    (add-hook 'ox-ipynb-preprocess-hook 'ox-ipynb-preprocess-babel-calls)
+
+    ;; now is the time for a final conversion
+    ;; Disable TOC in the intermediate org export (we handle it ourselves)
+    (let ((info (org-combine-plists info '(:with-toc nil))))
+      (org-org-export-as-org async subtreep visible-only body-only info))
+    (with-current-buffer "*Org ORG Export*"
+      (setq content (buffer-string)))
+    (kill-buffer "*Org ORG Export*")
+
     (with-temp-buffer
       (insert content)
       (org-mode)
@@ -1027,20 +1120,18 @@ Optional argument INFO is a plist of options."
 		 (cl--set-buffer-substring (org-element-property :begin hl)
 					   (org-element-property :end hl)
 					   (ox-ipynb--format "[${=KEY=}] ${AUTHOR}. ${TITLE}. https://dx.doi.org/${DOI}\n\n"
-						     (lambda (arg &optional extra)
-						       (let ((entry (org-element-property (intern-soft (concat ":"arg)) hl)))
-							 (substring
-							  entry
-							  (if (string-prefix-p "{" entry) 1 0)
-							  (if (string-suffix-p "}" entry) -1 nil)))))))))
+							     (lambda (arg &optional extra)
+							       (let ((entry (org-element-property (intern-soft (concat ":"arg)) hl)))
+								 (substring
+								  entry
+								  (if (string-prefix-p "{" entry) 1 0)
+								  (if (string-suffix-p "}" entry) -1 nil))))))))
 
-    (setq buf (ox-ipynb-export-to-buffer))
-    (with-current-buffer buf
-      (setq-local export-file-name ipynb))
-    ;; (prog1
-    ;; 	buf
-    ;;   (kill-buffer "*Org ORG Export*"))
-    buf))
+
+      (let ((buf (ox-ipynb-export-to-buffer)))
+	(with-current-buffer buf
+	  (setq-local export-file-name ipynb))
+	buf))))
 
 
 (defun ox-ipynb-export-to-ipynb-file (&optional async subtreep visible-only body-only info)
@@ -1099,9 +1190,11 @@ Optional argument SUBTREEP to export current subtree.
 Optional argument VISIBLE-ONLY to only export visible content.
 Optional argument BODY-ONLY export only the body.
 Optional argument INFO is a plist of options."
-  (let ((ox-ipynb-preprocess-hook '((lambda ()
-				      (org-babel-map-src-blocks nil
-					(org-babel-remove-result))))))
+  (let ((ox-ipynb-preprocess-hook  ox-ipynb-preprocess-hook ))
+    (add-hook 'ox-ipynb-preprocess-hook (lambda ()
+					  (org-babel-map-src-blocks nil
+					    (org-babel-remove-result))))
+
     (ox-ipynb-export-to-ipynb-file-and-open)))
 
 
