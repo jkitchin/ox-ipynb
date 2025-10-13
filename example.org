@@ -3,6 +3,8 @@
 
 #+ox-ipynb-keyword-metadata: key1 key2
 
+#+OPTIONS: toc:2
+
 * Introduction
 
 I wrote this module to allow me to write lecture notes in org-mode, but export them to ipython notebooks for my students. It also makes it easier to share my work with people who don't use org-mode (although it is a one-way conversion of org to ipynb).
@@ -27,7 +29,11 @@ You should get all the regular markup:
 - superscripts, e.g. H^+
 - subscripts, e.g. CH_{4}
 - hyperlinks: http://github.com/jkitchin/ox-ipynb
-- internal links do not work: [[id:78E6E264-C6C3-46B8-80D8-05A236497755][Org-mode markup]] 
+- internal links do not work: [[id:78E6E264-C6C3-46B8-80D8-05A236497755][Org-mode markup]]
+
+*** More information on markup
+
+See https://orgmode.org/manual/Markup-for-Rich-Contents.html for more information on org-mode markup.
 
 ** Embed equations
 
@@ -37,7 +43,7 @@ You can use LaTeX equations like: $\int_0^1 \sin x dx$.
 
 Note that code blocks must be either "ipython" or "R", and the first one determines the language used for all of the code blocks.
 
-#+BEGIN_SRC ipython 
+#+BEGIN_SRC ipython
 import numpy as np
 from scipy.integrate import quad
 
@@ -45,10 +51,7 @@ print(quad(lambda x: np.sin(x), 0, 1))
 #+END_SRC
 
 #+RESULTS:
-:RESULTS:
-(0.45969769413186023, 5.103669643922839e-15)
-
-:END:
+: (0.45969769413186023, 5.103669643922839e-15)
 
 
 Here we force a new cell to be created with the =ipynb-newcell= directive.
@@ -68,25 +71,19 @@ You can create tables and they render nicely in the notebook. Note that you prob
 | 3 | 9 |
 
 
-** Use ipython magic to get inline figures
+** Get inline figures
 
 #+BEGIN_SRC ipython
-%matplotlib inline
 import matplotlib.pyplot as plt
 
 z = np.linspace(0, 20 * np.pi, 500)
 x = np.sin(z) * np.exp(-0.1 * z)
 y = np.cos(z) * np.exp(-0.1 * z)
-plt.plot(x, y)
+plt.plot(x, y);
 #+END_SRC
 
 #+RESULTS:
-:RESULTS:
-
-[<matplotlib.lines.Line2D at 0x11a2ef6a0>]
-<matplotlib.figure.Figure at 0x11a22b588>
-[[file:ipython-inline-images/ob-ipython-3463501494cf7e34b4ab1216c3e45e82.png]]
-:END:
+[[file:./.ob-jupyter/9411e28ad62616151d9af9e0ab35e0adf179ef27.png]]
 
 ** Store metadata in the ipynb
 
@@ -95,7 +92,7 @@ The directive =ox-ipynb-keyword-metadata= lists file variables that should be sa
 #+key1: value1
 #+key2: value2
 
-We can set values as file variables like this: 
+We can set values as file variables like this:
 
 
 #+attr_org: :width 300
@@ -134,4 +131,3 @@ You can use an alert to highlight something you want to stand out.
  </div>
 
 <font color="blue">This text will show up as blue.</font>
-
