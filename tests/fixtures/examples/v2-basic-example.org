@@ -1,0 +1,20 @@
+#+TITLE: ox-ipynb-v2 Basic Example
+#+AUTHOR: Test User
+
+* Introduction
+
+This demonstrates ox-ipynb-v2 features.
+
+* Code Example
+
+#+BEGIN_SRC python
+print("Hello from ox-ipynb-v2!")
+x = [1, 2, 3, 4, 5]
+print(f"Sum: {sum(x)}")
+#+END_SRC
+
+* More Content
+
+This is markdown content with **bold** and *italic* text.
+
+Math: $E = mc^2$

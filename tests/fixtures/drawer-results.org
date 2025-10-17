@@ -1,0 +1,16 @@
+#+TITLE: Test Drawer Results
+
+* Test with Drawer Results
+
+Here's a code block with drawer-style results:
+
+#+BEGIN_SRC ipython
+import json
+d = {'KEY1': 'value1', 'KEY2': 'value2'}
+print(d)
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+{'KEY1': 'value1', 'KEY2': 'value2'}
+:END:
