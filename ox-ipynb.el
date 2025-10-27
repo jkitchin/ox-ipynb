@@ -1081,7 +1081,8 @@ Optional argument INFO is a plist of options."
 
     ;; now is the time for a final conversion
     ;; Disable TOC in the intermediate org export (we handle it ourselves)
-    (let ((info (org-combine-plists info '(:with-toc nil))))
+    ;; Enable properties export to preserve PROPERTIES drawers (needed for slideshow metadata)
+    (let ((info (org-combine-plists info '(:with-toc nil :with-properties t))))
       (org-org-export-as-org async subtreep visible-only body-only info))
     (with-current-buffer "*Org ORG Export*"
       (setq content (buffer-string)))
