@@ -352,6 +352,10 @@ version was incorrectly modifying them."
 (defvar ox-ipynb--toc-content nil
   "Cached Table of Contents text for deduplication during export.")
 
+(defvar ox-ipynb--attr-metadata nil
+  "Cached attr_ipynb metadata for elements, preserved across intermediate export.
+This is an alist of (ELEMENT-ID . ATTR-STRING) pairs.")
+
 ;; This is an org-link to get inlined images from the file system. This makes
 ;; the notebook bigger, but more portable.
 (org-link-set-parameters "image"
@@ -1060,6 +1064,85 @@ This is usually run as a function in `ox-ipynb-preprocess-hook'."
 	(cl--set-buffer-substring (org-element-property :begin src) (org-element-property :end src) "")))))
 
 
+(defun ox-ipynb--normalize-code (code)
+  "Normalize CODE by removing leading/trailing whitespace from each line.
+This handles indentation differences between original and intermediate export."
+  (let ((lines (split-string code "\n")))
+    (string-join (mapcar #'string-trim lines) "\n")))
+
+(defun ox-ipynb--collect-attr-metadata ()
+  "Collect all #+attr_ipynb: metadata from current buffer before intermediate export.
+Stores metadata in `ox-ipynb--attr-metadata' indexed by element source code."
+  (setq ox-ipynb--attr-metadata nil)
+  (let ((parse-tree (org-element-parse-buffer)))
+    ;; Collect from src blocks
+    (org-element-map parse-tree 'src-block
+      (lambda (src)
+        (let ((attr (plist-get (cadr src) :attr_ipynb)))
+          (when attr
+            (let* ((src-code-raw (car (org-export-unravel-code src)))
+                   (src-code (ox-ipynb--normalize-code src-code-raw))
+                   (attr-string (string-join attr " ")))
+              (push (cons src-code attr-string) ox-ipynb--attr-metadata))))))
+    ;; Collect from paragraphs and other elements
+    (org-element-map parse-tree 'paragraph
+      (lambda (para)
+        (let ((attr (plist-get (cadr para) :attr_ipynb)))
+          (when attr
+            (let* ((para-text (string-trim (buffer-substring-no-properties
+                                            (org-element-property :contents-begin para)
+                                            (org-element-property :contents-end para))))
+                   (attr-string (string-join attr " ")))
+              (push (cons para-text attr-string) ox-ipynb--attr-metadata))))))))
+
+(defun ox-ipynb--restore-attr-metadata ()
+  "Restore #+attr_ipynb: metadata to elements in current buffer after intermediate export.
+Uses metadata stored in `ox-ipynb--attr-metadata'."
+  (when ox-ipynb--attr-metadata
+    (let ((parse-tree (org-element-parse-buffer))
+          (insertions '()))
+      ;; Collect all insertions for src blocks (with positions)
+      (org-element-map parse-tree 'src-block
+        (lambda (src)
+          (let* ((src-code-raw (car (org-export-unravel-code src)))
+                 (src-code (ox-ipynb--normalize-code src-code-raw))
+                 (metadata (cdr (assoc src-code ox-ipynb--attr-metadata))))
+            (when metadata
+              (push (list 'src (org-element-property :begin src) metadata) insertions)))))
+      ;; Collect insertions for paragraphs
+      (org-element-map parse-tree 'paragraph
+        (lambda (para)
+          (let* ((para-text (when (and (org-element-property :contents-begin para)
+                                       (org-element-property :contents-end para))
+                             (string-trim (buffer-substring-no-properties
+                                          (org-element-property :contents-begin para)
+                                          (org-element-property :contents-end para)))))
+                 (metadata (when para-text
+                            (or
+                             ;; Try exact match first
+                             (cdr (assoc para-text ox-ipynb--attr-metadata))
+                             ;; Try prefix match (for paragraphs that gained content like image links)
+                             (cl-some (lambda (entry)
+                                       (when (string-prefix-p (car entry) para-text)
+                                         (cdr entry)))
+                                     ox-ipynb--attr-metadata)))))
+            (when metadata
+              (push (list 'para (org-element-property :begin para) metadata) insertions)))))
+      ;; Perform all insertions in reverse order (so positions don't shift)
+      (dolist (insertion (sort insertions (lambda (a b) (> (cadr a) (cadr b)))))
+        (let ((type (car insertion))
+              (pos (cadr insertion))
+              (metadata (caddr insertion)))
+          (save-excursion
+            (goto-char pos)
+            (if (eq type 'para)
+                ;; Paragraph: insert before
+                (insert "#+attr_ipynb: " metadata "\n")
+              ;; Src block: go back a line and insert
+              (forward-line -1)
+              (end-of-line)
+              (insert "\n#+attr_ipynb: " metadata))))))))
+
 ;; * export menu
 
 
@@ -1079,6 +1162,9 @@ Optional argument INFO is a plist of options."
     (add-hook 'ox-ipynb-preprocess-hook 'ox-ipynb-preprocess-ignore)
     (add-hook 'ox-ipynb-preprocess-hook 'ox-ipynb-preprocess-babel-calls)
 
+    ;; Collect #+attr_ipynb: metadata before intermediate export (they get stripped)
+    (ox-ipynb--collect-attr-metadata)
+
     ;; now is the time for a final conversion
     ;; Disable TOC in the intermediate org export (we handle it ourselves)
     ;; Enable properties export to preserve PROPERTIES drawers (needed for slideshow metadata)
@@ -1092,6 +1178,9 @@ Optional argument INFO is a plist of options."
       (insert content)
       (org-mode)
       (setq-local export-file-name ipynb)
+
+      ;; Restore #+attr_ipynb: metadata that was stripped during intermediate export
+      (ox-ipynb--restore-attr-metadata)
 
       ;; Reminder to self. This is not a regular kind of exporter. We have to
       ;; build up the json document that represents a notebook, so some things
