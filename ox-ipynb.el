@@ -605,23 +605,33 @@ Optional argument N, when non-nil, is an integer specifying the depth of the tab
   "Get the language for the exporter.
 If you set OX-IPYNB-LANGUAGE it will be used, otherwise we assume
 the first code-block contains the language you want. If none of
-those exist, default to ipython."
-  (intern (or
-	   (cdr (assoc "OX-IPYNB-LANGUAGE" (org-element-map (org-element-parse-buffer)
-					       'keyword
-					     (lambda (key)
-					       (cons (org-element-property :key key)
-						     (org-element-property :value key))))))
-	   (org-element-map (org-element-parse-buffer)
-	       'src-block
-	     (lambda (src)
-	       (unless (string= "none"
-				(cdr (assq :exports
-				           (org-babel-parse-header-arguments
-					    (org-element-property :parameters src)))))
-		 (org-element-property :language src)))
-	     nil t)
-	   "ipython")))
+those exist, default to ipython.
+
+Displays a warning if the detected language is not defined in
+`ox-ipynb-kernelspecs'."
+  (let ((lang (intern (or
+		       (cdr (assoc "OX-IPYNB-LANGUAGE" (org-element-map (org-element-parse-buffer)
+							   'keyword
+							 (lambda (key)
+							   (cons (org-element-property :key key)
+								 (org-element-property :value key))))))
+		       (org-element-map (org-element-parse-buffer)
+			   'src-block
+			 (lambda (src)
+			   (unless (string= "none"
+					    (cdr (assq :exports
+						       (org-babel-parse-header-arguments
+							(org-element-property :parameters src)))))
+			     (org-element-property :language src)))
+			 nil t)
+		       "ipython"))))
+    (unless (assq lang ox-ipynb-kernelspecs)
+      (display-warning
+       'ox-ipynb
+       (format "Language \"%s\" not defined in ox-ipynb-kernelspecs. Add it with (add-to-list 'ox-ipynb-kernelspecs '(%s . (kernelspec . ...)))"
+	       lang lang)
+       :warning))
+    lang))
 
 
 (defun ox-ipynb-split-text (s)
