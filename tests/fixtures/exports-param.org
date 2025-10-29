@@ -1,0 +1,53 @@
+#+TITLE: Exports Parameter Test
+#+AUTHOR: Test Author
+
+* Testing :exports parameter
+
+** exports none
+
+This block should not appear in the output:
+
+#+BEGIN_SRC python :exports none
+print("This should not appear")
+#+END_SRC
+
+** exports code
+
+This block should only show code (no output):
+
+#+BEGIN_SRC python :exports code
+print("Only code, no output")
+#+END_SRC
+
+** exports results
+
+This block should only show results (no code):
+
+#+BEGIN_SRC python :exports results
+print("Only output, no code")
+#+END_SRC
+
+#+RESULTS:
+: Only output, no code
+
+** exports both (default)
+
+This block should show both code and results:
+
+#+BEGIN_SRC python :exports both
+print("Both code and output")
+#+END_SRC
+
+#+RESULTS:
+: Both code and output
+
+** No exports parameter (default behavior)
+
+This should behave like :exports both:
+
+#+BEGIN_SRC python
+print("Default behavior")
+#+END_SRC
+
+#+RESULTS:
+: Default behavior

@@ -1,0 +1,94 @@
+#+TITLE: Diagram Generation with :exports results
+#+AUTHOR: ox-ipynb issue #31 test
+#+DESCRIPTION: Test for handling diagram code blocks with :exports results
+#+OX-IPYNB-LANGUAGE: jupyter-python
+
+* Issue Overview
+
+When using diagram-generating languages (ditaa, plantuml, graphviz, etc.),
+the code only works in Emacs/Org-mode and cannot execute in Jupyter.
+
+The `:exports results` parameter should export ONLY the generated image,
+not the source code that created it.
+
+* Test Case 1: Ditaa with :exports results
+
+This should export ONLY the generated image, not the ditaa source code:
+
+
+#+BEGIN_SRC ditaa :file diagram.png :exports results
+    +--------+   +-------+    +-------+
+    |        | --+ ditaa +--> |       |
+    |  Text  |   +-------+    |diagram|
+    |Document|   |!magic!|    |       |
+    |     {d}|   |       |    |       |
+    +---+----+   +-------+    +-------+
+        :                         ^
+        |       Lots of work      |
+        +-------------------------+
+#+END_SRC
+
+#+RESULTS:
+[[file:diagram.png]]
+
+* Test Case 2: Ditaa with :exports both (default)
+
+This exports both code and results:
+
+#+BEGIN_SRC ditaa :file diagram2.png :exports both
+    +--------+
+    | Box    |
+    +--------+
+#+END_SRC
+
+#+RESULTS:
+[[file:diagram2.png]]
+
+* Test Case 3: Ditaa with :exports code
+
+This exports only the code:
+
+#+BEGIN_SRC ditaa :file diagram3.png :exports code
+    +--------+
+    | Hidden |
+    +--------+
+#+END_SRC
+
+#+RESULTS:
+[[file:diagram3.png]]
+
+* Test Case 4: Ditaa with :exports none
+
+This exports nothing (block should be invisible):
+
+#+BEGIN_SRC ditaa :file diagram4.png :exports none
+    +--------+
+    | Ghost  |
+    +--------+
+#+END_SRC
+
+#+RESULTS:
+[[file:diagram4.png]]
+
+* Expected Behavior
+
+| :exports value | Expected in Jupyter notebook                    |
+|----------------+-------------------------------------------------|
+| results        | Only the image (as markdown cell)               |
+| both           | Code cell + image output                        |
+| code           | Code cell only (no results)                     |
+| none           | Nothing (block completely omitted)              |
+
+* Current Problem
+
+Currently, `ox-ipynb-v2` does not respect the `:exports` parameter and always
+exports the code block, even when `:exports results` is specified.
+
+This creates invalid notebooks because ditaa/plantuml/graphviz cannot run in Jupyter.
+
+#+BEGIN_SRC emacs-lisp
+
+(setq org-ditaa-jar-path "/opt/homebrew/Cellar/ditaa/0.11.0_1/libexec/ditaa-0.11.0-standalone.jar")
+(setq org-babel-ditaa-java-cmd "/opt/homebrew/opt/openjdk/bin/java")
+
+#+END_SRC

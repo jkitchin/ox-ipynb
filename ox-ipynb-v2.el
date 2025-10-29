@@ -272,10 +272,14 @@ We need fenced code blocks with language tags for proper cell detection."
 
 (defun ox-ipynb-v2--transcode-src-block (src-block contents info)
   "Custom transcoder for src-blocks to create fenced code blocks or MyST code-cells.
-SRC-BLOCK is the element, CONTENTS is nil, INFO is the plist."
+SRC-BLOCK is the element, CONTENTS is nil, INFO is the plist.
+Respects the :exports parameter: none, code, results, or both."
   (let* ((lang (org-element-property :language src-block))
          (code (org-element-property :value src-block))
          (code-trimmed (replace-regexp-in-string "\n+\\'" "" code))
+         (params (org-babel-parse-header-arguments
+                  (org-element-property :parameters src-block)))
+         (exports (or (cdr (assq :exports params)) "both"))
          (block-id (format "src-block-%d" ox-ipynb-v2--export-src-block-counter))
          (result-info (gethash block-id ox-ipynb-v2--src-block-results))
          output)
@@ -283,44 +287,76 @@ SRC-BLOCK is the element, CONTENTS is nil, INFO is the plist."
     ;; Increment counter for next block
     (setq ox-ipynb-v2--export-src-block-counter (1+ ox-ipynb-v2--export-src-block-counter))
 
-    (if ox-ipynb-v2-myst-format
-        ;; MyST format: use {code-cell} directive
-        (progn
-          (setq output (format "````{code-cell} %s\n%s\n````\n" lang code-trimmed))
+    ;; Handle :exports none - return empty string
+    (cond
+     ((string= "none" exports)
+      "")
 
-          ;; If there are image results, add them as a separate code-cell with :tags: [output]
-          (when (and result-info ox-ipynb-v2-include-results)
-            (let ((result (plist-get result-info :result)))
-              (when (and result (not (string-empty-p (string-trim result))))
+     ;; Handle :exports results - only export results, not code
+     ((string= "results" exports)
+      (if (and result-info ox-ipynb-v2-include-results)
+          (let ((result (plist-get result-info :result)))
+            (if (and result (not (string-empty-p (string-trim result))))
                 ;; Check if result contains an image link
-                (when (string-match org-any-link-re result)
-                  (let* ((img-path (match-string 2 result))
-                         img-data img-type)
-                    ;; Normalize file: prefix if present
-                    (when img-path
+                (if (string-match org-any-link-re result)
+                    (let ((img-path (match-string 2 result)))
+                      ;; Normalize file: prefix if present
                       (setq img-path (if (string-prefix-p "file:" img-path)
                                         (substring img-path 5)
                                       img-path))
-                      ;; Check if it's an image and process it
-                      (when (and (file-exists-p img-path)
-                                 (image-supported-file-p img-path))
-                        ;; Encode the image
-                        (setq img-data (base64-encode-string
-                                       (encode-coding-string
-                                        (with-temp-buffer
-                                          (insert-file-contents img-path)
-                                          (buffer-string))
-                                        'binary)
-                                       t))
-                        ;; Determine image type from extension
-                        (setq img-type (file-name-extension img-path))
-                        (setq output (concat output
-                                           (format "````{code-cell} %s\n:tags: [output]\n\n![%s](data:image/%s;base64,%s)\n````\n"
-                                                   lang img-type img-type img-data))))))))))
-          output)
+                      ;; Return image as markdown
+                      (format "![image](%s)\n\n" img-path))
+                  ;; Non-image result
+                  (concat result "\n\n"))
+              ""))
+        ""))
 
-      ;; Standard fenced code block format
-      (format "```%s\n%s\n```\n" lang code-trimmed))))
+     ;; Handle :exports code - only export code, not results
+     ((string= "code" exports)
+      (if ox-ipynb-v2-myst-format
+          (format "````{code-cell} %s\n%s\n````\n" lang code-trimmed)
+        (format "```%s\n%s\n```\n" lang code-trimmed)))
+
+     ;; Handle :exports both (default) - export both code and results
+     (t
+      (if ox-ipynb-v2-myst-format
+          ;; MyST format: use {code-cell} directive
+          (progn
+            (setq output (format "````{code-cell} %s\n%s\n````\n" lang code-trimmed))
+
+            ;; If there are image results, add them as a separate code-cell with :tags: [output]
+            (when (and result-info ox-ipynb-v2-include-results)
+              (let ((result (plist-get result-info :result)))
+                (when (and result (not (string-empty-p (string-trim result))))
+                  ;; Check if result contains an image link
+                  (when (string-match org-any-link-re result)
+                    (let* ((img-path (match-string 2 result))
+                           img-data img-type)
+                      ;; Normalize file: prefix if present
+                      (when img-path
+                        (setq img-path (if (string-prefix-p "file:" img-path)
+                                          (substring img-path 5)
+                                        img-path))
+                        ;; Check if it's an image and process it
+                        (when (and (file-exists-p img-path)
+                                   (image-supported-file-p img-path))
+                          ;; Encode the image
+                          (setq img-data (base64-encode-string
+                                         (encode-coding-string
+                                          (with-temp-buffer
+                                            (insert-file-contents img-path)
+                                            (buffer-string))
+                                          'binary)
+                                         t))
+                          ;; Determine image type from extension
+                          (setq img-type (file-name-extension img-path))
+                          (setq output (concat output
+                                             (format "````{code-cell} %s\n:tags: [output]\n\n![%s](data:image/%s;base64,%s)\n````\n"
+                                                     lang img-type img-type img-data))))))))))
+            output)
+
+        ;; Standard fenced code block format
+        (format "```%s\n%s\n```\n" lang code-trimmed))))))
 
 (defun ox-ipynb-v2--collect-src-block-results ()
   "Collect all source block results before export.

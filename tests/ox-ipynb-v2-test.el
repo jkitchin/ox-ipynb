@@ -132,6 +132,70 @@
   (should (string= "$x$"
                    (ox-ipynb-v2--filter-latex-fragment "\\(x\\)" 'md nil))))
 
+(ert-deftest ox-ipynb-v2-test-exports-none ()
+  "Test that :exports none completely omits the block."
+  (with-temp-buffer
+    (insert "#+BEGIN_SRC python :exports none\n")
+    (insert "print('invisible')\n")
+    (insert "#+END_SRC\n")
+    (org-mode)
+    (let ((markdown (org-export-as 'ipynb-v2-md)))
+      (should-not (string-match-p "invisible" markdown))
+      (should-not (string-match-p "```python" markdown)))))
+
+(ert-deftest ox-ipynb-v2-test-exports-code ()
+  "Test that :exports code only exports the code, not results."
+  (with-temp-buffer
+    (insert "#+BEGIN_SRC python :exports code\n")
+    (insert "print('code only')\n")
+    (insert "#+END_SRC\n\n")
+    (insert "#+RESULTS:\n")
+    (insert ": code only\n")
+    (org-mode)
+    (let ((markdown (org-export-as 'ipynb-v2-md)))
+      (should (string-match-p "```python" markdown))
+      (should (string-match-p "print('code only')" markdown)))))
+
+(ert-deftest ox-ipynb-v2-test-exports-results ()
+  "Test that :exports results only exports results, not code."
+  (with-temp-buffer
+    (insert "#+BEGIN_SRC python :exports results\n")
+    (insert "print('results only')\n")
+    (insert "#+END_SRC\n\n")
+    (insert "#+RESULTS:\n")
+    (insert ": results only\n")
+    (org-mode)
+    (setq ox-ipynb-v2-include-results t)
+    (let ((markdown (org-export-as 'ipynb-v2-md)))
+      (should-not (string-match-p "```python" markdown))
+      (should-not (string-match-p "print('results only')" markdown))
+      (should (string-match-p "results only" markdown)))))
+
+(ert-deftest ox-ipynb-v2-test-exports-both ()
+  "Test that :exports both exports both code and results."
+  (with-temp-buffer
+    (insert "#+BEGIN_SRC python :exports both\n")
+    (insert "print('both')\n")
+    (insert "#+END_SRC\n\n")
+    (insert "#+RESULTS:\n")
+    (insert ": both\n")
+    (org-mode)
+    (setq ox-ipynb-v2-include-results t)
+    (let ((markdown (org-export-as 'ipynb-v2-md)))
+      (should (string-match-p "```python" markdown))
+      (should (string-match-p "print('both')" markdown)))))
+
+(ert-deftest ox-ipynb-v2-test-exports-default ()
+  "Test that default behavior (no :exports param) acts like :exports both."
+  (with-temp-buffer
+    (insert "#+BEGIN_SRC python\n")
+    (insert "print('default')\n")
+    (insert "#+END_SRC\n")
+    (org-mode)
+    (let ((markdown (org-export-as 'ipynb-v2-md)))
+      (should (string-match-p "```python" markdown))
+      (should (string-match-p "print('default')" markdown)))))
+
 (provide 'ox-ipynb-v2-test)
 
 ;;; ox-ipynb-v2-test.el ends here
