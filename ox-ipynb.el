@@ -142,7 +142,13 @@ REPLACER-FN is called with the variable name (without ${}) and should return the
 							       (name . "julia-0.6"))))
                                (jupyter-python . (kernelspec . ((display_name . "Python 3")
                                                                 (language . "python")
-                                                                (name . "python3")))))
+                                                                (name . "python3"))))
+			       (clojure . (kernelspec . ((display_name . "Clojure")
+							 (language . "clojure")
+							 (name . "clojupyter"))))
+			       (jupyter-clojure . (kernelspec . ((display_name . "Clojure")
+								 (language . "clojure")
+								 (name . "clojupyter")))))
   "Kernelspec metadata for different kernels.")
 
 
@@ -189,7 +195,20 @@ REPLACER-FN is called with the variable name (without ${}) and should return the
 				   (mimetype . "text/x-r-source")
 				   (name . "R")
 				   (pygments_lexer . "r")
-				   (version . "3.3.2")))))
+				   (version . "3.3.2"))))
+
+    (clojure . (language_info . ((codemirror_mode . "clojure")
+				 (file_extension . ".clj")
+				 (mimetype . "text/x-clojure")
+				 (name . "clojure")
+				 (pygments_lexer . "clojure")
+				 (version . "1.11"))))
+    (jupyter-clojure . (language_info . ((codemirror_mode . "clojure")
+					 (file_extension . ".clj")
+					 (mimetype . "text/x-clojure")
+					 (name . "clojure")
+					 (pygments_lexer . "clojure")
+					 (version . "1.11")))))
   "These get injected into notebook metadata.
 They are reverse-engineered from existing notebooks.")
 
