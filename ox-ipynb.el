@@ -38,6 +38,11 @@
 ;; This will use store key:value pairs in
 ;; the notebook metadata section, in an org section.
 ;;
+;; You can also add custom notebook-level metadata (e.g. for RISE slideshows) using:
+;; #+OX-IPYNB-NOTEBOOK-METADATA: (rise . ((autolaunch . t) (scroll . t)))
+;; This adds arbitrary metadata at the top level of the notebook's metadata section.
+;; Multiple lines are supported and will be merged.
+;;
 ;; It is also possible to set cell metadata on src-block cells. You use an
 ;; attribute like #+ATTR_IPYNB: :key1 val1 :key2 val2 to set the cell metadata.
 ;; You can also do this on paragraphs. Only one attr_ipynb line is supported, so
@@ -773,7 +778,23 @@ nil:END:"  nil t)
                                                                    collect (assoc key all-keywords))))
                                            keywords))
                                  ,(cdr (assoc ox-ipynb-language ox-ipynb-kernelspecs))
-                                 ,(cdr (assoc ox-ipynb-language ox-ipynb-language-infos)))))
+                                 ,(cdr (assoc ox-ipynb-language ox-ipynb-language-infos))
+                                 ;; Add custom notebook metadata from OX-IPYNB-NOTEBOOK-METADATA
+                                 ,@(let* ((all-keywords (org-element-map (org-element-parse-buffer)
+                                                          'keyword
+                                                        (lambda (key)
+                                                          (cons (org-element-property :key key)
+                                                                (org-element-property :value key)))))
+                                          (notebook-metadata-strings (cl-loop for kw in all-keywords
+                                                                             when (string= (car kw) "OX-IPYNB-NOTEBOOK-METADATA")
+                                                                             collect (cdr kw)))
+                                          (all-metadata (cl-loop for meta-string in notebook-metadata-strings
+                                                                append (condition-case err
+                                                                           (read (format "(%s)" meta-string))
+                                                                         (error
+                                                                          (message "Error parsing OX-IPYNB-NOTEBOOK-METADATA: %s" err)
+                                                                          nil)))))
+                                     all-metadata))))
          (ipynb (ox-ipynb-notebook-filename))
          src-blocks
          src-results

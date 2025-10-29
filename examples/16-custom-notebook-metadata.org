@@ -1,0 +1,164 @@
+#+TITLE: Custom Notebook Metadata Example
+#+AUTHOR: ox-ipynb examples
+#+DESCRIPTION: Demonstrates custom notebook-level metadata using #+OX-IPYNB-NOTEBOOK-METADATA
+
+# Add RISE configuration for auto-launching slideshow
+#+OX-IPYNB-NOTEBOOK-METADATA: (rise . ((autolaunch . t) (scroll . t) (enable_chalkboard . t)))
+
+# Add custom application metadata
+#+OX-IPYNB-NOTEBOOK-METADATA: (custom_app . ((version . "1.0") (author . "ox-ipynb")))
+
+* Custom Notebook Metadata
+
+This example demonstrates how to add custom metadata at the notebook level
+using the =#+OX-IPYNB-NOTEBOOK-METADATA:= directive.
+
+** What is Notebook Metadata?
+
+Jupyter notebooks have a metadata section at the top level that controls
+various notebook behaviors. Common uses include:
+
+- *RISE slideshow configuration*: Auto-launch presentations, scrolling, themes
+- *Execution settings*: Kernel preferences, language versions
+- *Custom application data*: Your own metadata for processing pipelines
+- *Publishing settings*: Tags, categories, or other organizational metadata
+
+** RISE Autolaunch Feature
+
+This notebook is configured with =autolaunch= enabled, which means when opened
+in Jupyter with the RISE extension installed, it will automatically start in
+slideshow/presentation mode.
+
+#+attr_ipynb: (slideshow . ((slide_type . slide)))
+#+BEGIN_SRC ipython
+# This is the first slide
+import numpy as np
+import matplotlib.pyplot as plt
+
+print("Welcome to the auto-launching slideshow!")
+#+END_SRC
+
+** How to Use This Feature
+
+To add custom notebook metadata, use the directive:
+
+#+BEGIN_EXAMPLE
+#+OX-IPYNB-NOTEBOOK-METADATA: (key . ((subkey1 . value1) (subkey2 . value2)))
+#+END_EXAMPLE
+
+The syntax follows Emacs Lisp association list format, which gets converted
+to JSON in the final notebook.
+
+** Multiple Metadata Sections
+
+You can include multiple =#+OX-IPYNB-NOTEBOOK-METADATA:= lines, and they will
+all be merged into the notebook metadata:
+
+#+attr_ipynb: (slideshow . ((slide_type . slide)))
+This slide demonstrates that multiple metadata sections work together.
+
+** RISE Configuration Options
+
+Common RISE configuration options you can set:
+
+- =autolaunch=: Start slideshow automatically (=t= or =nil=)
+- =scroll=: Enable scrolling within slides (=t= or =nil=)
+- =enable_chalkboard=: Enable drawing on slides (=t= or =nil=)
+- =theme=: Presentation theme (="simple"=, ="serif"=, etc.)
+- =transition=: Slide transition effect (="slide"=, ="fade"=, etc.)
+
+#+attr_ipynb: (slideshow . ((slide_type . slide)))
+#+BEGIN_SRC ipython
+# Example: Plot some data
+x = np.linspace(0, 2*np.pi, 100)
+y = np.sin(x)
+
+plt.figure(figsize=(10, 6))
+plt.plot(x, y, 'b-', linewidth=2)
+plt.title('Sine Wave')
+plt.xlabel('x')
+plt.ylabel('sin(x)')
+plt.grid(True, alpha=0.3)
+plt.show()
+#+END_SRC
+
+** Custom Application Metadata
+
+Besides RISE, you can add any custom metadata for your own applications
+or processing pipelines:
+
+#+attr_ipynb: (slideshow . ((slide_type . slide)))
+This notebook also includes =custom_app= metadata with version and author
+information that could be used by automated processing tools.
+
+** Inspecting the Metadata
+
+#+attr_ipynb: (slideshow . ((slide_type . slide)))
+#+BEGIN_SRC ipython
+# In Jupyter, you can inspect notebook metadata via:
+# Edit → Edit Notebook Metadata
+
+# Or programmatically:
+import json
+import IPython
+
+# Get the notebook name (if running in Jupyter)
+try:
+    notebook_path = IPython.get_ipython().parent_header['metadata']['cellId']
+    print("Running in Jupyter notebook")
+except:
+    print("Metadata inspection available only when running in Jupyter")
+
+print("\nThis notebook should have:")
+print("- rise.autolaunch = true")
+print("- rise.scroll = true")
+print("- rise.enable_chalkboard = true")
+print("- custom_app.version = '1.0'")
+print("- custom_app.author = 'ox-ipynb'")
+#+END_SRC
+
+** Use Cases
+
+#+attr_ipynb: (slideshow . ((slide_type . slide)))
+Common use cases for custom notebook metadata:
+
+1. *Automated presentations*: Use with mybinder.org or JupyterHub
+2. *CI/CD pipelines*: Add build or version information
+3. *Educational content*: Track course, module, or difficulty level
+4. *Publishing workflows*: Add categories, tags, or publication dates
+5. *Research notebooks*: Include DOI, grant information, or affiliations
+
+** Verification
+
+To verify the metadata was correctly added, open the exported =.ipynb= file
+and check the top-level metadata section. You should see:
+
+#+BEGIN_EXAMPLE
+{
+  "metadata": {
+    "rise": {
+      "autolaunch": true,
+      "scroll": true,
+      "enable_chalkboard": true
+    },
+    "custom_app": {
+      "version": "1.0",
+      "author": "ox-ipynb"
+    },
+    ...
+  }
+}
+#+END_EXAMPLE
+
+** Summary
+
+#+attr_ipynb: (slideshow . ((slide_type . slide)))
+The =#+OX-IPYNB-NOTEBOOK-METADATA:= directive provides flexible notebook-level
+metadata control directly from your org-mode source files, enabling:
+
+- Better integration with Jupyter extensions like RISE
+- Custom metadata for automation and processing
+- Per-notebook configuration without manual JSON editing
+- Reproducible notebook generation in CI/CD pipelines
+
+This resolves the feature request in GitHub issue #29!
