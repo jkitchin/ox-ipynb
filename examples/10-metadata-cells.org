@@ -1,0 +1,158 @@
+#+TITLE: Cell Metadata Examples
+#+AUTHOR: ox-ipynb examples
+#+DESCRIPTION: Demonstrates cell-level metadata using #+attr_ipynb
+
+
+
+* Cell Metadata Basics
+
+Cell metadata in Jupyter notebooks controls various cell properties like
+slideshow behavior, tags, execution order, and more.
+
+** Using =#+attr_ipynb=
+
+The =#+attr_ipynb:= directive allows you to add metadata to cells.
+
+* Slideshow Metadata
+
+** Slide Type: Slide
+
+   :PROPERTIES:
+   :metadata: (slideshow . ((slide_type . slide)))
+   :END:
+
+This is a main slide in a presentation.
+
+#+attr_ipynb: (slideshow . ((slide_type . slide)))
+#+BEGIN_SRC jupyter-python
+# This code cell is also a slide
+print("Main slide content")
+#+END_SRC
+
+** Slide Type: Subslide
+
+   :PROPERTIES:
+   :metadata: (slideshow . ((slide_type . subslide)))
+   :END:
+
+This is a subslide, shown when advancing within a slide.
+
+** Slide Type: Fragment
+
+#+attr_ipynb: (slideshow . ((slide_type . fragment)))
+This content appears as a fragment (incrementally).
+
+#+attr_ipynb: (slideshow . ((slide_type . fragment)))
+Another fragment that appears on the next click.
+
+** Slide Type: Skip
+
+#+attr_ipynb: (slideshow . ((slide_type . skip)))
+This content is skipped during slideshow presentation.
+
+#+attr_ipynb: (slideshow . ((slide_type . skip)))
+#+BEGIN_SRC jupyter-python
+# This code cell is also skipped in slideshow mode
+# Useful for setup code you don't want to present
+import numpy as np
+import matplotlib.pyplot as plt
+#+END_SRC
+
+** Slide Type: Notes
+
+#+attr_ipynb: (slideshow . ((slide_type . notes)))
+These are speaker notes - visible only to the presenter.
+
+* Cell Tags
+
+** Tagged Cells
+
+#+attr_ipynb: (tags . ("important" "review"))
+This cell is tagged with "important" and "review".
+
+#+attr_ipynb: (tags . ("hide-input"))
+#+BEGIN_SRC jupyter-python
+# This cell has a "hide-input" tag
+# Some notebook extensions can hide cells with this tag
+result = sum(range(100))
+print(f"Sum: {result}")
+#+END_SRC
+
+#+attr_ipynb: (tags . ("remove-cell"))
+This cell could be removed during export with appropriate settings.
+
+* Collapsed Cells
+
+** Collapsed Code Cell
+
+#+attr_ipynb: (jupyter . ((outputs_hidden . t)))
+#+BEGIN_SRC jupyter-python
+# This cell's output might be collapsed by default
+for i in range(20):
+    print(f"Line {i}")
+#+END_SRC
+
+* Execution Control
+
+** Run Control Metadata
+
+#+attr_ipynb: (jupyter . ((source_hidden . t)))
+#+BEGIN_SRC jupyter-python
+# This cell's source might be hidden
+secret_calculation = 42 * 1.5
+print(f"Result: {secret_calculation}")
+#+END_SRC
+
+* Custom Metadata
+
+** Adding Custom Metadata
+
+#+attr_ipynb: (custom . ((author . "John Doe") (version . "1.0")))
+This cell has custom metadata fields.
+
+#+attr_ipynb: (exercise . ((difficulty . "intermediate") (points . 10)))
+#+BEGIN_SRC jupyter-python
+# Custom metadata for educational content
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+
+print([fibonacci(i) for i in range(10)])
+#+END_SRC
+
+* Combining Multiple Metadata
+
+** Multiple Attributes
+
+#+attr_ipynb: (slideshow . ((slide_type . slide))) (tags . ("demo" "important"))
+This cell combines multiple metadata attributes:
+- It's a slide
+- Tagged with "demo" and "important"
+
+#+attr_ipynb: (slideshow . ((slide_type . fragment))) (tags . ("code-example"))
+#+BEGIN_SRC jupyter-python
+# Fragment slide with a code tag
+import datetime
+print(f"Current time: {datetime.datetime.now()}")
+#+END_SRC
+
+* Notes on Metadata
+
+The metadata affects how cells are:
+1. *Displayed* in slideshow mode
+2. *Tagged* for filtering or processing
+3. *Executed* or rendered
+4. *Exported* to other formats
+
+Not all notebook viewers support all metadata types. Jupyter's RISE
+extension is commonly used for slideshow features.
+
+* export                                                           :noexport:
+
+#+BEGIN_SRC emacs-lisp
+(ox-ipynb-export-to-ipynb-slides-and-open)
+#+END_SRC
+
+#+RESULTS:
+: #<window 11 on *Async Shell Command*>

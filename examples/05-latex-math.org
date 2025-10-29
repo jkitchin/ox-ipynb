@@ -1,0 +1,148 @@
+#+TITLE: LaTeX and Mathematics
+#+AUTHOR: ox-ipynb examples
+#+DESCRIPTION: Demonstrates LaTeX mathematical expressions in Jupyter notebooks
+
+* Inline Mathematics
+
+** Basic Inline Math
+
+Einstein's famous equation is $E = mc^2$. The golden ratio is approximately $\phi = \frac{1 + \sqrt{5}}{2} \approx 1.618$.
+
+Greek letters are commonly used: $\alpha$, $\beta$, $\gamma$, $\delta$, $\epsilon$, $\theta$, $\lambda$, $\mu$, $\pi$, $\sigma$, $\omega$.
+
+** Subscripts and Superscripts
+
+Variables with indices: $x_1, x_2, \ldots, x_n$ and $a^2 + b^2 = c^2$.
+
+Combined: $x_{i,j}^{(k)}$ and $\sum_{i=1}^{n} x_i^2$.
+
+* Display Mathematics
+
+** Single Equations
+
+The quadratic formula:
+$$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$
+
+Euler's identity:
+$$e^{i\pi} + 1 = 0$$
+
+The Gaussian integral:
+$$\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}$$
+
+** Aligned Equations
+
+Maxwell's equations:
+
+\begin{align}
+\nabla \cdot \mathbf{E} &= \frac{\rho}{\epsilon_0} \\
+\nabla \cdot \mathbf{B} &= 0 \\
+\nabla \times \mathbf{E} &= -\frac{\partial \mathbf{B}}{\partial t} \\
+\nabla \times \mathbf{B} &= \mu_0 \mathbf{J} + \mu_0 \epsilon_0 \frac{\partial \mathbf{E}}{\partial t}
+\end{align}
+
+** Matrices and Vectors
+
+A rotation matrix:
+$$R(\theta) = \begin{pmatrix}
+\cos\theta & -\sin\theta \\
+\sin\theta & \cos\theta
+\end{pmatrix}$$
+
+Dot product:
+$$\mathbf{a} \cdot \mathbf{b} = \sum_{i=1}^{n} a_i b_i = a_1 b_1 + a_2 b_2 + \cdots + a_n b_n$$
+
+* Calculus
+
+** Derivatives
+
+The derivative of a function:
+$$f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}$$
+
+Partial derivatives:
+$$\frac{\partial^2 f}{\partial x \partial y} = \frac{\partial}{\partial x}\left(\frac{\partial f}{\partial y}\right)$$
+
+** Integrals
+
+Definite integral:
+$$\int_a^b f(x) \, dx$$
+
+Multiple integrals:
+$$\iiint_V f(x,y,z) \, dV$$
+
+* Probability and Statistics
+
+** Probability Distributions
+
+Normal distribution PDF:
+$$f(x | \mu, \sigma^2) = \frac{1}{\sigma\sqrt{2\pi}} e^{-\frac{(x-\mu)^2}{2\sigma^2}}$$
+
+Binomial probability:
+$$P(X = k) = \binom{n}{k} p^k (1-p)^{n-k}$$
+
+** Statistical Formulas
+
+Expected value:
+$$E[X] = \sum_{i=1}^{n} x_i P(x_i)$$
+
+Variance:
+$$\text{Var}(X) = E[(X - \mu)^2] = E[X^2] - (E[X])^2$$
+
+* Linear Algebra
+
+** System of Equations
+
+$$\begin{cases}
+2x + 3y - z = 1 \\
+x - y + 2z = 4 \\
+3x + 2y + z = 7
+\end{cases}$$
+
+** Eigenvalue Equation
+
+$$A\mathbf{v} = \lambda\mathbf{v}$$
+
+Where $A$ is a matrix, $\mathbf{v}$ is an eigenvector, and $\lambda$ is the corresponding eigenvalue.
+
+* Special Functions
+
+** Summations and Products
+
+Finite sum:
+$$\sum_{k=1}^{n} k = \frac{n(n+1)}{2}$$
+
+Infinite series:
+$$\sum_{n=0}^{\infty} \frac{x^n}{n!} = e^x$$
+
+Product notation:
+$$\prod_{i=1}^{n} x_i = x_1 \cdot x_2 \cdot \ldots \cdot x_n$$
+
+** Set Theory
+
+Set operations: $A \cup B$, $A \cap B$, $A \setminus B$, $A^c$
+
+Membership: $x \in A$, $x \notin B$
+
+Subset relations: $A \subseteq B$, $A \subset B$
+
+* Complex Expressions
+
+** Fourier Transform
+
+$$\mathcal{F}[f(t)] = F(\omega) = \int_{-\infty}^{\infty} f(t) e^{-i\omega t} \, dt$$
+
+** Schrödinger Equation
+
+$$i\hbar \frac{\partial}{\partial t} \Psi(\mathbf{r},t) = \left[-\frac{\hbar^2}{2m}\nabla^2 + V(\mathbf{r},t)\right] \Psi(\mathbf{r},t)$$
+
+** Taylor Series
+
+$$f(x) = f(a) + f'(a)(x-a) + \frac{f''(a)}{2!}(x-a)^2 + \frac{f'''(a)}{3!}(x-a)^3 + \cdots$$
+
+* Notes
+
+Jupyter notebooks use MathJax or KaTeX to render LaTeX mathematics.
+Most standard LaTeX math commands are supported, though some advanced
+packages may not be available.
+
+For inline math, use =$...$= in org-mode.
+For display math, use =$$...$$= or LaTeX environments.

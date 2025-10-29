@@ -1,0 +1,34 @@
+* Using noweb in ox-ipynb
+
+** Define some variables
+#+NAME: variables
+#+BEGIN_SRC jupyter-python
+name = "World"
+greeting = "Hello"
+#+END_SRC
+
+* Define a function
+
+#+NAME: greet-function
+#+BEGIN_SRC jupyter-python :exports code
+def greet(name, greeting):
+    return f"{greeting}, {name}!"
+#+END_SRC
+
+* Main program
+
+#+NAME: main-program
+#+BEGIN_SRC jupyter-python :noweb yes :exports both
+<<variables>>
+
+<<greet-function>>
+
+# Use the function
+message = greet(name, greeting)
+print(message)
+print(f"The message length is: {len(message)}")
+#+END_SRC
+
+#+RESULTS: main-program
+: Hello, World!
+: The message length is: 13

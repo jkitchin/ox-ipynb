@@ -1,0 +1,10 @@
+#+TITLE: exporting with a broken link
+#+AUTHOR: O.R.G
+
+#+OPTIONS: broken-links:mark
+
+* a
+
+This is a link that works: [[a]]
+
+This is a link that fails: [[abc]]

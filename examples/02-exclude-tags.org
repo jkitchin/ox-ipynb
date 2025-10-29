@@ -1,0 +1,24 @@
+#+TITLE: Example of org to ipynb
+#+AUTHOR: John Kitchin
+
+
+#+OPTIONS: toc:2
+#+EXCLUDE_TAGS: exclude noexport
+
+* Introduction
+
+This notebook tests exclude tags.
+
+** Org-mode markup                                                 :noexport:
+
+You should not see this in the export
+
+Cras placerat accumsan nulla.
+
+** This section has no tags and should be visible
+
+Nam vestibulum accumsan nisl.
+
+** This section should be excluded                                   :exclude:
+
+Fusce suscipit, wisi nec facilisis facilisis, est dui fermentum leo, quis tempor ligula erat quis odio.

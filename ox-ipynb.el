@@ -356,6 +356,10 @@ version was incorrectly modifying them."
   "Cached attr_ipynb metadata for elements, preserved across intermediate export.
 This is an alist of (ELEMENT-ID . ATTR-STRING) pairs.")
 
+(defvar ox-ipynb--broken-links nil
+  "Broken links handling mode for export (nil, 'mark, or 'ignore).
+Captured from buffer settings or org-export-with-broken-links variable.")
+
 ;; This is an org-link to get inlined images from the file system. This makes
 ;; the notebook bigger, but more portable.
 (org-link-set-parameters "image"
@@ -429,7 +433,7 @@ This is an alist of (ELEMENT-ID . ATTR-STRING) pairs.")
 			   " "
 			   (org-export-string-as
 			    (org-element-property :raw-value HEADLINE)
-			    'md t '(:with-toc nil :with-tags nil)))))
+			    'md t `(:with-toc nil :with-tags nil :with-broken-links ,ox-ipynb--broken-links)))))
 		       ((symbol-function 'org-export-get-relative-level)
                         (lambda (headline info)
 			  "changed to get the level number of a headline. We need the absolute level."
@@ -461,7 +465,7 @@ This is an alist of (ELEMENT-ID . ATTR-STRING) pairs.")
          (replace-regexp-in-string "\n\n" "\n" (or contents "")))))
                (org-export-string-as
                 s
-                'md t '(:with-toc nil :with-tags nil))))
+                'md t `(:with-toc nil :with-tags nil :with-broken-links ,ox-ipynb--broken-links))))
  	 (pos -1)
 	 (attachments '())
 	 metadata)
@@ -483,7 +487,9 @@ This is an alist of (ELEMENT-ID . ATTR-STRING) pairs.")
 
     ;; metadata handling, work on the original string since the attr line is
     ;; gone from the export
-    (when (string-match "#\\+attr_ipynb: *\\(.*\\)" s)
+    ;; Match only at beginning of line (after newline or at string start) to avoid
+    ;; matching text like "The =#+attr_ipynb:= directive"
+    (when (string-match "\\(?:^\\|\n\\)#\\+attr_ipynb: *\\(.*\\)" s)
       (setq metadata (read (format "(%s)" (match-string 1 s)))))
 
     ;; check headline metadata
@@ -565,8 +571,8 @@ html I think. That is not currently supported.
   (let ((s title))
     ;; First replace spaces with hyphens
     (setq s (replace-regexp-in-string " " "-" s))
-    ;; Then remove all non-alphanumeric except hyphens
-    (replace-regexp-in-string "[^a-z0-9-]" "" s)))
+    ;; Then remove all non-alphanumeric except hyphens and dots
+    (replace-regexp-in-string "[^a-z0-9.-]" "" s)))
 
 
 (defun ox-ipynb--build-toc (info &optional n)
@@ -919,10 +925,11 @@ nil:END:"  nil t)
 	  (when (string= "EXPORT_FILE_NAME" (org-element-property :key k))
 	    (org-element-property :value k)))
 	nil t)
-      ;; last case
-      (concat (file-name-base
-	       (or (buffer-file-name)
-		   "Untitled")) ".ipynb")))
+      ;; last case - preserve directory of source file
+      (let ((source-file (buffer-file-name)))
+	(if source-file
+	    (concat (file-name-sans-extension source-file) ".ipynb")
+	  "Untitled.ipynb"))))
 
 
 (defun ox-ipynb-preprocess-ignore ()
@@ -1021,6 +1028,8 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
    (cl-loop for func in ox-ipynb-preprocess-hook do (funcall func))
 
    ;; Now get the data and put the json into a buffer
+   ;; Disable org-element caching to ensure we see modifications from hooks
+   (let ((org-element-use-cache nil))
    (let ((data (ox-ipynb-export-to-buffer-data))
 	 (ipynb (ox-ipynb-notebook-filename)))
      (with-current-buffer (get-buffer-create "*ox-ipynb*")
@@ -1029,7 +1038,7 @@ else is exported as a markdown cell. The output is in *ox-ipynb*."
 
      (switch-to-buffer "*ox-ipynb*")
      (setq-local export-file-name ipynb)
-     (get-buffer "*ox-ipynb*"))))
+     (get-buffer "*ox-ipynb*")))))
 
 
 (defun ox-ipynb-nbopen (fname)
@@ -1055,14 +1064,72 @@ This is usually run as a function in `ox-ipynb-preprocess-hook'."
 
 
 (defun ox-ipynb-remove-remove ()
-  "Delete all cells with remove in the metadata.
-This is not specific
+  "Delete all elements with :remove t in #+attr_ipynb metadata.
+Works on src-blocks, paragraphs, plain-lists, and other elements.
 This is usually run as a function in `ox-ipynb-preprocess-hook'."
-  (org-babel-map-src-blocks nil
-    (let* ((src (org-element-context)))
-      (when (plist-get (org-export-read-attribute :attr_ipynb src) :remove)
-	(cl--set-buffer-substring (org-element-property :begin src) (org-element-property :end src) "")))))
+  (let* ((parse-tree (org-element-parse-buffer))
+         (elements-to-remove '()))
+    ;; Collect all elements with :remove attribute
+    ;; Helper to add element to removal list
+    (cl-flet ((maybe-remove (elem)
+                (when (plist-get (org-export-read-attribute :attr_ipynb elem) :remove)
+                  (push (cons (org-element-property :begin elem)
+                             (org-element-property :end elem))
+                        elements-to-remove))))
+      ;; Check src-blocks
+      (org-element-map parse-tree 'src-block #'maybe-remove)
+      ;; Check paragraphs
+      (org-element-map parse-tree 'paragraph #'maybe-remove)
+      ;; Check plain-lists
+      (org-element-map parse-tree 'plain-list #'maybe-remove))
+    ;; Remove elements in reverse order (from end to beginning) to preserve positions
+    (dolist (bounds (sort elements-to-remove (lambda (a b) (> (car a) (car b)))))
+      (cl--set-buffer-substring (car bounds) (cdr bounds) ""))))
 
+
+(defvar ox-ipynb--results-blocks nil
+  "Alist storing results blocks indexed by source code.
+Used to preserve results through intermediate org export.")
+
+(defun ox-ipynb--collect-results ()
+  "Collect all #+RESULTS blocks from current buffer before intermediate export.
+Stores results indexed by normalized source code in `ox-ipynb--results-blocks'."
+  (setq ox-ipynb--results-blocks nil)
+  (org-babel-map-src-blocks nil
+    (let* ((src-code-raw (nth 1 (org-babel-get-src-block-info)))
+           (src-code (ox-ipynb--normalize-code src-code-raw))
+           (result-pos (org-babel-where-is-src-block-result))
+           result-text)
+      (when result-pos
+        (save-excursion
+          (goto-char result-pos)
+          (when (looking-at (concat org-babel-result-regexp ".*$"))
+            (let ((start (match-beginning 0))
+                  (end (progn (forward-line 1) (org-babel-result-end))))
+              (setq result-text (buffer-substring-no-properties start end))
+              (push (cons src-code result-text) ox-ipynb--results-blocks))))))))
+
+(defun ox-ipynb--restore-results ()
+  "Restore #+RESULTS blocks that were stripped during intermediate export.
+Uses results stored in `ox-ipynb--results-blocks'."
+  (when ox-ipynb--results-blocks
+    (let ((parse-tree (org-element-parse-buffer))
+          (insertions '()))
+      ;; Collect all src blocks and their matching results
+      (org-element-map parse-tree 'src-block
+        (lambda (src)
+          (let* ((src-code-raw (car (org-export-unravel-code src)))
+                 (src-code (ox-ipynb--normalize-code src-code-raw))
+                 (result-text (cdr (assoc src-code ox-ipynb--results-blocks))))
+            (when result-text
+              ;; Store position to insert after src block
+              (push (cons (org-element-property :end src) result-text) insertions)))))
+      ;; Insert results in reverse order to preserve positions
+      (dolist (insertion (sort insertions (lambda (a b) (> (car a) (car b)))))
+        (save-excursion
+          (goto-char (car insertion))
+          ;; Insert a blank line then the results
+          (insert "\n" (cdr insertion)))))))
 
 (defun ox-ipynb--normalize-code (code)
   "Normalize CODE by removing leading/trailing whitespace from each line.
@@ -1157,6 +1224,17 @@ Optional argument INFO is a plist of options."
   (let ((ox-ipynb-preprocess-hook ox-ipynb-preprocess-hook)
 	(ipynb (ox-ipynb-notebook-filename))
 	(content (buffer-string))
+	;; Collect bibliography files early while we have access to the original buffer
+	;; Use expand-file-name to get absolute paths
+	(bib-files (condition-case nil
+		       (progn (require 'oc)
+			      (mapcar #'expand-file-name (org-cite-list-bibliography-files)))
+		     (error nil)))
+	;; Capture broken-links setting from buffer or variable
+	;; Default to 'mark to allow citation links and other special links to pass through
+	(ox-ipynb--broken-links (or (plist-get (org-export-get-environment) :with-broken-links)
+				    org-export-with-broken-links
+				    'mark))
         buf)
 
     (add-hook 'ox-ipynb-preprocess-hook 'ox-ipynb-preprocess-ignore)
@@ -1165,10 +1243,26 @@ Optional argument INFO is a plist of options."
     ;; Collect #+attr_ipynb: metadata before intermediate export (they get stripped)
     (ox-ipynb--collect-attr-metadata)
 
+    ;; Collect #+RESULTS: blocks before intermediate export (they get stripped)
+    (ox-ipynb--collect-results)
+
+    ;; Remove cite_export keyword to avoid requiring citeproc during intermediate export
+    ;; We'll handle bibliography rendering ourselves later
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward "^#\\+cite_export:.*$" nil t)
+	(replace-match "")))
+
     ;; now is the time for a final conversion
     ;; Disable TOC in the intermediate org export (we handle it ourselves)
     ;; Enable properties export to preserve PROPERTIES drawers (needed for slideshow metadata)
-    (let ((info (org-combine-plists info '(:with-toc nil :with-properties t))))
+    ;; Get export environment to preserve buffer settings (like broken-links handling)
+    ;; Always mark broken links during intermediate export (citations, fuzzy links will be handled later)
+    ;; IMPORTANT: Disable cite processors to prevent org-cite from formatting citations
+    ;; We'll handle citation formatting ourselves later
+    (let ((info (org-combine-plists
+                 (or info (org-export-get-environment))
+                 '(:with-toc nil :with-properties t :with-broken-links mark :with-cite-processors nil))))
       (org-org-export-as-org async subtreep visible-only body-only info))
     (with-current-buffer "*Org ORG Export*"
       (setq content (buffer-string)))
@@ -1182,46 +1276,225 @@ Optional argument INFO is a plist of options."
       ;; Restore #+attr_ipynb: metadata that was stripped during intermediate export
       (ox-ipynb--restore-attr-metadata)
 
-      ;; Reminder to self. This is not a regular kind of exporter. We have to
-      ;; build up the json document that represents a notebook, so some things
-      ;; don't work like a regular exporter that has access to the whole data
-      ;; structure for resolving links. We have to handle org-ref separately. At
-      ;; this point, they are no longer org-ref links, and have been converted
-      ;; to custom-id links. They don't render because they are turned to md as
-      ;; isolated strings.
-      (let ((links (cl-loop for link in (org-element-map
-					    (org-element-parse-buffer) 'link 'identity)
-			    if (string= "custom-id" (org-element-property :type link))
-			    collect link)))
-	(cl-loop for link in (reverse links)
-		 do
-		 (cl--set-buffer-substring (org-element-property :begin link)
-					   (org-element-property :end link)
-					   (format "[%s]" (org-element-property :path link)))))
-      ;; The bibliography also leaves something to be desired. It gets turned
-      ;; into an org-bibtex set of headings. Here we convert these to something
-      ;; just slightly more palatable.
-      (let ((bib-entries (cl-loop for hl in (org-element-map
-						(org-element-parse-buffer) 'headline 'identity)
-				  if (org-element-property :=KEY= hl)
-				  collect hl)))
-	(cl-loop for hl in (reverse bib-entries)
-		 do
-		 (cl--set-buffer-substring (org-element-property :begin hl)
-					   (org-element-property :end hl)
-					   (ox-ipynb--format "[${=KEY=}] ${AUTHOR}. ${TITLE}. https://dx.doi.org/${DOI}\n\n"
-							     (lambda (arg &optional extra)
-							       (let ((entry (org-element-property (intern-soft (concat ":"arg)) hl)))
-								 (substring
-								  entry
-								  (if (string-prefix-p "{" entry) 1 0)
-								  (if (string-suffix-p "}" entry) -1 nil))))))))
+      ;; Restore #+RESULTS: blocks that were stripped during intermediate export
+      (ox-ipynb--restore-results)
 
+      ;; Resolve fuzzy links before markdown conversion
+      ;; We need to resolve them here because org-md exports cells in isolation
+      ;; and can't resolve links that reference other parts of the document
+      (let* ((parsed (org-element-parse-buffer))
+             (info (org-combine-plists
+                    (org-export-get-environment)
+                    (list :with-broken-links ox-ipynb--broken-links
+                          :parse-tree parsed)))
+             (fuzzy-links (cl-loop for link in (org-element-map parsed 'link 'identity)
+                                   if (string= "fuzzy" (org-element-property :type link))
+                                   collect link))
+             (custom-id-links (cl-loop for link in (org-element-map parsed 'link 'identity)
+                                       if (string= "custom-id" (org-element-property :type link))
+                                       collect link)))
+
+        ;; Resolve fuzzy links
+        (cl-loop for link in (reverse fuzzy-links)
+                 do
+                 (let* ((path (org-element-property :path link))
+                        ;; Skip cite: style links (they're handled by org-ref preprocessing)
+                        (is-cite-link (string-prefix-p "cite:" path))
+                        (target (unless is-cite-link
+                                  (condition-case nil
+                                      (org-export-resolve-fuzzy-link link info)
+                                    (error nil)))))
+                   (when target
+                     ;; Link resolved! Replace with markdown link to the target
+                     ;; Generate markdown-style slug from heading text (not org's auto ID)
+                     (let* ((target-text (cond
+                                          ((eq (org-element-type target) 'headline)
+                                           (org-element-property :raw-value target))
+                                          ((eq (org-element-type target) 'target)
+                                           (org-element-property :value target))
+                                          (t path)))
+                            ;; Slugify: replace spaces with hyphens, remove special chars, preserve case
+                            ;; This matches GitHub-flavored markdown and Jupyter anchor style
+                            (target-slug (replace-regexp-in-string
+                                          "[^A-Za-z0-9-]" ""
+                                          (replace-regexp-in-string
+                                           " +" "-"
+                                           target-text)))
+                            (contents-begin (org-element-property :contents-begin link))
+                            (contents-end (org-element-property :contents-end link))
+                            (desc (when (and contents-begin contents-end)
+                                    (buffer-substring-no-properties contents-begin contents-end)))
+                            ;; For links like [[*Heading]], strip the leading * from the path when using as description
+                            (link-text (or desc
+                                          (if (string-prefix-p "*" path)
+                                              (substring path 1) ; Remove leading *
+                                            path)))
+                            ;; Preserve any trailing whitespace that org-element includes in :end
+                            (link-end (org-element-property :end link))
+                            (trailing-space (when (and (< link-end (point-max))
+                                                      (= (char-after (1- link-end)) ?\s))
+                                             " "))
+                            (markdown-link (concat (format "[%s](#%s)" link-text target-slug)
+                                                  trailing-space)))
+                       (cl--set-buffer-substring (org-element-property :begin link)
+                                                 (org-element-property :end link)
+                                                 markdown-link)))))
+
+        ;; Handle custom-id links (org-ref style)
+        (cl-loop for link in (reverse custom-id-links)
+                 do
+                 (cl--set-buffer-substring (org-element-property :begin link)
+                                           (org-element-property :end link)
+                                           (format "[%s]" (org-element-property :path link)))))
+
+      ;; Format inline citations for org-cite
+      ;; Build a map of citation keys to formatted short citations
+      (when bib-files
+	(let ((citation-map (make-hash-table :test 'equal)))
+	  ;; Load all citations from bib files
+	  (with-temp-buffer
+	    (dolist (bibfile bib-files)
+	      (when (file-exists-p bibfile)
+		(insert-file-contents bibfile)))
+	    (bibtex-mode)
+	    ;; Parse each entry and create short citation
+	    (goto-char (point-min))
+	    (while (re-search-forward "@[a-zA-Z]+{" nil t)
+	      (beginning-of-line)
+	      (let ((entry (bibtex-parse-entry)))
+		(when entry
+		  (let* ((key (cdr (assoc "=key=" entry)))
+			 ;; Clean and normalize author field (remove braces, newlines, extra spaces)
+			 (author-raw (or (cdr (assoc "author" entry)) ""))
+			 (author (string-trim
+				  (replace-regexp-in-string
+				   " +" " "
+				   (replace-regexp-in-string
+				    "[\n\r]+" " "
+				    (replace-regexp-in-string "[{}]" "" author-raw)))))
+			 (year (replace-regexp-in-string "[{}]" "" (or (cdr (assoc "year" entry)) "")))
+			 ;; Extract first author's last name
+			 (first-author (if (string-match "\\([A-Za-z-]+\\)," author)
+					   (match-string 1 author)
+					 "Unknown"))
+			 ;; Check if multiple authors (contains "and")
+			 (multiple-authors (string-match-p " and " author))
+			 (short-cite (format "(%s%s %s)"
+					     first-author
+					     (if multiple-authors " et al." "")
+					     year)))
+		    (puthash key short-cite citation-map))))
+	      (forward-line 1)))
+
+	  ;; Collect all citations and citation keys BEFORE replacement
+	  (let ((citations (org-element-map (org-element-parse-buffer) 'citation 'identity))
+		(all-citation-keys (org-element-map (org-element-parse-buffer) 'citation-reference
+				     (lambda (ref) (org-element-property :key ref)))))
+
+	    ;; Replace all citation references in the buffer
+	    (cl-loop for citation in (reverse citations)
+		     do
+		     (let* ((refs (org-element-map citation 'citation-reference
+				    (lambda (ref) (org-element-property :key ref))))
+			    (formatted-cite (mapconcat
+					     (lambda (key)
+					       (or (gethash key citation-map)
+						   (format "(%s, ????)" key)))
+					     refs
+					     "; ")))
+		       (cl--set-buffer-substring (org-element-property :begin citation)
+						 (org-element-property :end citation)
+						 formatted-cite)))
+
+	    ;; Now process bibliography with access to all-citation-keys
+	    ;; IMPORTANT: Re-parse the buffer AFTER citation replacements to get correct positions
+	    (let* ((bib-entries (cl-loop for hl in (org-element-map
+						     (org-element-parse-buffer) 'headline 'identity)
+				       if (org-element-property :=KEY= hl)
+				       collect hl))
+		 (print-bib-keyword (org-element-map (org-element-parse-buffer) 'keyword
+				      (lambda (kw)
+					(when (string-match-p "PRINT_BIBLIOGRAPHY"
+							     (upcase (org-element-property :key kw)))
+					  kw))
+				      nil t))
+		 (formatted-entries nil))
+
+	      ;; Format entries from org-bibtex headings if they exist
+	      (when bib-entries
+		(setq formatted-entries
+		      (mapconcat
+		       (lambda (hl)
+			 (ox-ipynb--format "[${=KEY=}] ${AUTHOR}. ${TITLE}. https://dx.doi.org/${DOI}\n\n"
+					   (lambda (arg &optional extra)
+					     (let ((entry (org-element-property (intern-soft (concat ":"arg)) hl)))
+					       (substring
+						entry
+						(if (string-prefix-p "{" entry) 1 0)
+						(if (string-suffix-p "}" entry) -1 nil))))))
+		       bib-entries
+		       "")))
+
+	      ;; If no org-bibtex entries found, try org-cite (read .bib files directly)
+	      ;; Use the citation keys we collected earlier (before replacing citations)
+	      (when (and (not bib-entries) print-bib-keyword all-citation-keys)
+		(setq formatted-entries
+		      (with-temp-buffer
+			(dolist (bibfile bib-files)
+			  (when (file-exists-p bibfile)
+			    (insert-file-contents bibfile)))
+			(bibtex-mode)
+			(mapconcat
+			 (lambda (key)
+			   (goto-char (point-min))
+			   (if (bibtex-search-entry key)
+			       (let* ((entry (bibtex-parse-entry))
+				      ;; Helper to clean bibtex field: remove braces and normalize whitespace
+				      (clean-field (lambda (field)
+						     (let ((value (or (cdr (assoc field entry)) "")))
+						       ;; Remove braces
+						       (setq value (replace-regexp-in-string "[{}]" "" value))
+						       ;; Normalize whitespace: replace newlines and multiple spaces with single space
+						       (setq value (replace-regexp-in-string "[\n\r]+" " " value))
+						       (setq value (replace-regexp-in-string " +" " " value))
+						       ;; Trim leading/trailing whitespace
+						       (string-trim value))))
+				      (author (funcall clean-field "author"))
+				      (title (funcall clean-field "title"))
+				      (year (funcall clean-field "year"))
+				      (doi (funcall clean-field "doi"))
+				      (url (funcall clean-field "url")))
+				 (format "[%s] %s. %s. %s%s\n\n"
+					 key
+					 (if (string= author "") "Unknown" author)
+					 (if (string= title "") "Untitled" title)
+					 year
+					 (if (and doi (not (string= doi "")))
+					     (format " https://dx.doi.org/%s" doi)
+					   (if (and url (not (string= url "")))
+					       (format " %s" url)
+					     ""))))
+			     ""))
+			 all-citation-keys
+			 ""))))
+
+	      ;; If we found a PRINT_BIBLIOGRAPHY keyword, replace it with the formatted entries
+	      (when (and print-bib-keyword formatted-entries (not (string= formatted-entries "")))
+		(cl--set-buffer-substring (org-element-property :begin print-bib-keyword)
+					  (org-element-property :end print-bib-keyword)
+					  formatted-entries))
+
+	      ;; Remove the original bibliography entry headings (org-ref style)
+	      (cl-loop for hl in (reverse bib-entries)
+		       do
+		       (cl--set-buffer-substring (org-element-property :begin hl)
+						 (org-element-property :end hl)
+						 ""))))))  ; Close cl-loop, let* (bib), let (citations), let (citation-map), when (bib-files)
 
       (let ((buf (ox-ipynb-export-to-buffer)))
 	(with-current-buffer buf
 	  (setq-local export-file-name ipynb))
-	buf))))
+	buf))))  ; Close let+with-temp-buffer
 
 
 (defun ox-ipynb-export-to-ipynb-file (&optional async subtreep visible-only body-only info)
@@ -1281,9 +1554,35 @@ Optional argument VISIBLE-ONLY to only export visible content.
 Optional argument BODY-ONLY export only the body.
 Optional argument INFO is a plist of options."
   (let ((ox-ipynb-preprocess-hook  ox-ipynb-preprocess-hook ))
-    (add-hook 'ox-ipynb-preprocess-hook (lambda ()
-					  (org-babel-map-src-blocks nil
-					    (org-babel-remove-result))))
+    (add-hook 'ox-ipynb-preprocess-hook
+              (lambda ()
+                (org-babel-map-src-blocks nil
+                  (org-babel-remove-result))
+                ;; Clean up any stray RESULTS drawers left behind
+                (save-excursion
+                  ;; Remove full RESULTS drawers (handling nested drawers properly)
+                  (goto-char (point-min))
+                  (while (re-search-forward "^:RESULTS:\\s-*$" nil t)
+                    (let ((start (match-beginning 0))
+                          (depth 1))
+                      ;; Move forward counting drawer depth
+                      (forward-line)
+                      (while (and (> depth 0) (not (eobp)))
+                        (cond
+                         ((looking-at "^:RESULTS:\\s-*$")
+                          (setq depth (1+ depth)))
+                         ((looking-at "^:END:\\s-*$")
+                          (setq depth (1- depth))))
+                        (forward-line))
+                      ;; Remove the entire drawer
+                      (delete-region start (point))))
+                  ;; Clean up any remaining standalone :END: lines (not in property drawers)
+                  (goto-char (point-min))
+                  (while (re-search-forward "^\\s-*:END:\\s-*$" nil t)
+                    (unless (save-excursion
+                              (forward-line -1)
+                              (looking-at "^:PROPERTIES:"))
+                      (replace-match ""))))))
 
     (ox-ipynb-export-to-ipynb-file-and-open)))
 

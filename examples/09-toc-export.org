@@ -1,0 +1,182 @@
+#+TITLE: Table of Contents Export
+#+AUTHOR: ox-ipynb examples
+#+DESCRIPTION: Demonstrates table of contents generation in Jupyter notebooks
+#+OPTIONS: toc:t
+
+* Introduction
+
+This example demonstrates how ox-ipynb handles table of contents (TOC)
+generation. The TOC provides navigation for long notebooks.
+
+To enable TOC export, use:
+: #+OPTIONS: toc:t
+
+* First Main Section
+
+This is the first major section of the document.
+
+** Subsection 1.1
+
+Content for the first subsection.
+
+#+BEGIN_SRC jupyter-python
+# Some code in subsection 1.1
+print("First subsection")
+#+END_SRC
+
+** Subsection 1.2
+
+More content in another subsection.
+
+*** Subsubsection 1.2.1
+
+Even deeper nesting is supported.
+
+#+BEGIN_SRC jupyter-python
+# Nested content
+for i in range(3):
+    print(f"Level 3: {i}")
+#+END_SRC
+
+*** Subsubsection 1.2.2
+
+Another deep section.
+
+** Subsection 1.3
+
+Final subsection of the first main section.
+
+* Second Main Section
+
+This is the second major section.
+
+** Subsection 2.1
+
+Content for section 2.1.
+
+#+BEGIN_SRC jupyter-python
+import numpy as np
+import matplotlib.pyplot as plt
+
+x = np.linspace(0, 2*np.pi, 100)
+y = np.sin(x)
+
+plt.plot(x, y)
+plt.title('Sine Wave in Section 2.1')
+plt.xlabel('x')
+plt.ylabel('sin(x)')
+plt.show()
+#+END_SRC
+
+** Subsection 2.2
+
+More content in section 2.2.
+
+*** Subsubsection 2.2.1
+
+Details in subsection 2.2.1.
+
+*** Subsubsection 2.2.2
+
+Details in subsection 2.2.2.
+
+* Third Main Section
+
+The third major section with different content.
+
+** Mathematical Content
+
+Some equations:
+
+$$E = mc^2$$
+
+$$F = ma$$
+
+** Code Examples
+
+#+BEGIN_SRC jupyter-python
+def fibonacci(n):
+    """Calculate the nth Fibonacci number."""
+    if n <= 1:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+
+# Print first 10 Fibonacci numbers
+fib_numbers = [fibonacci(i) for i in range(10)]
+print("Fibonacci sequence:", fib_numbers)
+#+END_SRC
+
+** Data Analysis Section
+
+#+BEGIN_SRC jupyter-python
+import pandas as pd
+
+# Create sample data
+data = {
+    'Name': ['Alice', 'Bob', 'Charlie', 'Diana'],
+    'Score': [85, 92, 78, 95],
+    'Grade': ['B', 'A', 'C', 'A']
+}
+
+df = pd.DataFrame(data)
+print(df)
+print(f"\nAverage Score: {df['Score'].mean():.2f}")
+#+END_SRC
+
+* Fourth Main Section
+
+** Tables and Data
+
+| Category | Count | Percentage |
+|----------+-------+------------|
+| Type A   |    45 |        30% |
+| Type B   |    68 |        45% |
+| Type C   |    37 |        25% |
+|----------+-------+------------|
+| Total    |   150 |       100% |
+
+** Summary Statistics
+
+#+BEGIN_SRC jupyter-python
+# Generate some random data for statistics
+data = np.random.normal(100, 15, 1000)
+
+print(f"Mean: {np.mean(data):.2f}")
+print(f"Median: {np.median(data):.2f}")
+print(f"Std Dev: {np.std(data):.2f}")
+print(f"Min: {np.min(data):.2f}")
+print(f"Max: {np.max(data):.2f}")
+#+END_SRC
+
+* Conclusion
+
+This notebook demonstrates table of contents organization. The TOC helps
+navigate through:
+
+1. Multiple main sections
+2. Nested subsections
+3. Code and text cells
+4. Different types of content
+
+The TOC is particularly useful for longer notebooks with complex structure.
+
+* TOC Configuration Options
+
+You can control TOC depth using:
+: #+OPTIONS: toc:2
+
+This limits the TOC to 2 levels of headings.
+
+You can also disable TOC with:
+: #+OPTIONS: toc:nil
+
+* Notes on TOC in Jupyter
+
+Jupyter notebooks don't have built-in TOC support, but:
+1. The Jupyter TOC extension adds navigation
+2. JupyterLab has a TOC extension
+3. nbconvert can generate TOC in HTML exports
+4. Some notebook viewers render TOC differently
+
+The ox-ipynb exporter creates the TOC as a markdown cell at the beginning
+of the notebook.

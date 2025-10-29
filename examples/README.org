@@ -1,0 +1,255 @@
+#+TITLE: ox-ipynb Examples
+#+AUTHOR: ox-ipynb
+#+DATE: 2025
+
+* Overview
+
+This directory contains example org-mode files demonstrating various features
+of =ox-ipynb=, the Org-mode exporter for Jupyter notebooks.
+
+* Example Files
+
+Examples are numbered from simple to advanced. Start with 01-basic-features.org
+and progress through the examples in order.
+
+** 01. Basic Features
+*** [[file:01-basic-features.org][01-basic-features.org]]
+A comprehensive introduction to ox-ipynb covering:
+- Code cells and markdown cells
+- Text formatting
+- Lists and tables
+- Mathematical expressions
+- Basic export workflow
+
+Great starting point for new users.
+
+** 02-06. Plotting and Visualization
+
+*** [[file:02-plots-inline.org][02-plots-inline.org]]
+Inline plot generation with ipython:
+- Matplotlib plots that display automatically
+- Interactive plotting
+- No file saving required
+
+*** [[file:03-plots-file-output.org][03-plots-file-output.org]]
+Plot generation with file output:
+- Saving plots to files
+- Referencing saved images
+- Controlling plot quality (DPI, size)
+
+** 04. Tables and Data
+*** [[file:04-tables.org][04-tables.org]]
+Table export examples:
+- Simple org-mode tables
+- Tables with alignment
+- Tables from pandas DataFrames
+- Statistical summary tables
+
+** 05. Mathematics
+*** [[file:05-latex-math.org][05-latex-math.org]]
+LaTeX mathematical expressions:
+- Inline math: =$E = mc^2$=
+- Display math: =$$\int f(x) dx$$=
+- Matrices, vectors, calculus
+- Complex equations
+- Special symbols and functions
+
+** 06. Links and Images
+*** [[file:06-links-images.org][06-links-images.org]]
+Comprehensive guide to links and images:
+- External links
+- Internal cross-references
+- Embedding images
+- Image sizing and styling
+- Generating images from code
+
+** 07-08. Citations and References
+*** [[file:07-citations-org-cite.org][07-citations-org-cite.org]]
+Demonstrates the newer =org-cite= citation system:
+- Inline citations using =[cite:@key]=
+- Bibliography generation with =#+PRINT_BIBLIOGRAPHY:=
+- Automatic citation formatting
+
+Requires:
+- =oc.el= (org-cite)
+- A =.bib= file (see [[file:citations.bib][citations.bib]])
+
+*** [[file:08-citations-org-ref.org][08-citations-org-ref.org]]
+Demonstrates the =org-ref= citation system:
+- Citations using =[[cite:&key]]=
+- Bibliography with =bibliography:file.bib=
+- Custom citation styles
+
+Requires:
+- =org-ref= package installed
+- Preprocessing hook configured (see file for details)
+
+** 09. Table of Contents
+*** [[file:09-toc-export.org][09-toc-export.org]]
+Table of contents generation:
+- Automatic TOC creation
+- Multi-level heading structure
+- TOC depth control
+- Navigation in long notebooks
+
+** 10. Advanced Cell Metadata
+*** [[file:10-metadata-cells.org][10-metadata-cells.org]]
+Cell-level metadata control:
+- Slideshow attributes
+- Cell tags
+- Collapsed cells
+- Custom metadata
+- Execution control
+
+** 11. Presentations and Slideshows
+*** [[file:11-slideshow.org][11-slideshow.org]]
+Creating presentations with RISE:
+- Slide metadata using =#+attr_ipynb:=
+- Slide types: slide, subslide, fragment, skip, notes
+- Cell visibility control
+- Presentation structure
+
+Requires Jupyter RISE extension for viewing.
+
+** 12. Other Languages
+*** [[file:12-languages-r.org][12-languages-r.org]]
+R language support:
+- R code blocks
+- R data frames
+- Statistical analysis
+- R plotting
+
+Requires:
+- R installed
+- IRkernel package
+- R kernel registered with Jupyter
+
+* Quick Start
+
+** Exporting an Example
+
+1. Open any example file in Emacs
+2. Load ox-ipynb: =(require 'ox-ipynb)=
+3. Export with =C-c C-e=, then select notebook option:
+   - =n n= - Export to .ipynb file
+   - =n o= - Export and open in Jupyter
+   - =s o= - Export as slideshow and open
+
+** Creating Your Own Notebook
+
+1. Create a new .org file
+2. Add header information:
+   #+BEGIN_EXAMPLE
+   #+TITLE: My Notebook
+   #+AUTHOR: Your Name
+   #+END_EXAMPLE
+
+3. Add content with headings and code blocks:
+   #+BEGIN_EXAMPLE
+   * Introduction
+   Some text here.
+
+   #+BEGIN_SRC jupyter-python
+   print("Hello, Jupyter!")
+   #+END_SRC
+   #+END_EXAMPLE
+
+4. Export to notebook format
+
+* Feature Support Matrix
+
+| Feature                  | File Example                   | Status |
+|--------------------------+--------------------------------+--------|
+| Basic export             | 01-basic-features.org          | ✓      |
+| Python code              | 01-basic-features.org          | ✓      |
+| Inline plots             | 02-plots-inline.org            | ✓      |
+| File plots               | 03-plots-file-output.org       | ✓      |
+| Tables                   | 04-tables.org                  | ✓      |
+| Inline math              | 05-latex-math.org              | ✓      |
+| Display math             | 05-latex-math.org              | ✓      |
+| Links                    | 06-links-images.org            | ✓      |
+| Images                   | 06-links-images.org            | ✓      |
+| Citations (org-cite)     | 07-citations-org-cite.org      | ✓      |
+| Citations (org-ref)      | 08-citations-org-ref.org       | ✓      |
+| TOC                      | 09-toc-export.org              | ✓      |
+| Cell metadata            | 10-metadata-cells.org          | ✓      |
+| Slideshows               | 11-slideshow.org               | ✓      |
+| R code                   | 12-languages-r.org             | ✓      |
+
+* Tips and Best Practices
+
+** Code Blocks
+
+- Use =#+BEGIN_SRC jupyter-python= for Python code
+- Use =#+BEGIN_SRC R= for R code (in R notebooks)
+- Add =:results output= for text output
+- Add =:results file= for image output
+
+** Metadata
+
+- Use =#+attr_ipynb:= to add cell metadata
+- Common use: slideshow control
+- Example: =#+attr_ipynb: (slideshow . ((slide_type . slide)))=
+
+** Citations
+
+- =org-cite= is recommended for new documents
+- =org-ref= provides more advanced features
+- Both require bibliography (.bib) files
+
+** Images
+
+- Matplotlib plots display automatically
+- Save plots with =plt.savefig()= for reuse
+- Reference saved images with =[[file:image.png]]=
+
+** Tables
+
+- Simple org tables export well
+- Use pandas for complex tables
+- Consider DataFrame display options
+
+* Troubleshooting
+
+** Export Issues
+
+- Ensure ox-ipynb is loaded: =(require 'ox-ipynb)=
+- Check for syntax errors in org file
+- Verify code block headers are correct
+
+** Display Issues
+
+- Math may require MathJax in Jupyter
+- Some metadata only works with extensions
+- Image paths should be relative or absolute
+
+** Citation Issues
+
+- org-cite: requires =oc.el= and bibliography file
+- org-ref: requires preprocessing hook setup
+- Check .bib file is accessible
+
+* Additional Resources
+
+- [[https://github.com/jkitchin/ox-ipynb][ox-ipynb repository]]
+- [[https://orgmode.org][Org-mode documentation]]
+- [[https://jupyter.org][Jupyter documentation]]
+- [[https://jupyterlab.readthedocs.io][JupyterLab documentation]]
+
+* Contributing Examples
+
+To contribute new examples:
+
+1. Create a focused example demonstrating one feature
+2. Add clear comments and documentation
+3. Include header with title, author, description
+4. Test export to ensure it works
+5. Update this README
+6. Submit a pull request
+
+Good example characteristics:
+- Clear, focused content
+- Self-contained (minimal dependencies)
+- Well-commented code
+- Explains the feature being demonstrated
+- Works out of the box when possible

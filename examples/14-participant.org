@@ -1,0 +1,102 @@
+#+TITLE: Participant Notebook Example
+#+AUTHOR: ox-ipynb examples
+#+DESCRIPTION: Demonstrates creating participant notebooks with solutions and hidden content removed
+
+* Introduction
+
+This example demonstrates how to create participant notebooks where solutions
+and instructor notes are automatically removed.
+
+* Exercise 1: Basic Python
+
+Write a function to calculate the factorial of a number.
+
+#+BEGIN_SRC jupyter-python
+def factorial(n):
+    ### BEGIN SOLUTION
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+    ### END SOLUTION
+    ### BEGIN HIDDEN
+    # This is a note for the instructor
+    # Students should implement recursion here
+    ### END HIDDEN
+    pass  # Student implementation goes here
+
+# Test the function
+print(factorial(5))  # Should print 120
+#+END_SRC
+
+* Exercise 2: Data Analysis
+
+Load and analyze the following data:
+
+#+BEGIN_SRC jupyter-python
+import pandas as pd
+import numpy as np
+
+# Create sample data
+data = {'score': [85, 92, 78, 95, 88]}
+df = pd.DataFrame(data)
+
+### BEGIN SOLUTION
+# Calculate mean and standard deviation
+mean_score = df['score'].mean()
+std_score = df['score'].std()
+print(f"Mean: {mean_score:.2f}")
+print(f"Std Dev: {std_score:.2f}")
+### END SOLUTION
+
+### BEGIN HIDDEN
+# Expected output:
+# Mean: 87.60
+# Std Dev: 6.47
+### END HIDDEN
+#+END_SRC
+
+* Instructor Notes
+
+You should see this line, but not others.
+
+#+attr_ipynb: :remove t
+This section contains notes for the instructor. Key points to cover: recursion in factorial, pandas DataFrames, and statistics calculations.
+
+#+attr_ipynb: :remove t
+#+BEGIN_SRC jupyter-python
+# Instructor-only code for generating test data
+import random
+test_data = [random.randint(50, 100) for _ in range(20)]
+print("Test data for grading:", test_data)
+#+END_SRC
+
+* Exercise 3: List Comprehension
+
+Complete the function to filter even numbers from a list:
+
+#+BEGIN_SRC jupyter-python
+numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+### BEGIN SOLUTION
+even_numbers = [n for n in numbers if n % 2 == 0]
+### END SOLUTION
+
+print("Even numbers:", even_numbers)
+#+END_SRC
+
+* Summary
+
+This notebook demonstrates:
+- Exercise problems with hidden solutions
+- Instructor notes that are removed
+- Mixed visible and hidden content
+
+* Export Instructions                                            :noexport:
+
+To create the participant notebook, use:
+=M-x ox-ipynb-export-to-participant-notebook=
+
+Or programmatically:
+#+BEGIN_SRC emacs-lisp :results silent
+(ox-ipynb-export-to-participant-notebook)
+#+END_SRC

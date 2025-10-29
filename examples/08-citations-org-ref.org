@@ -1,0 +1,27 @@
+#+TITLE: Citations with org-ref
+#+AUTHOR: ox-ipynb examples
+#+DESCRIPTION: Demonstrates org-ref citations and bibliography export
+
+* Example Citation
+
+A citation about UMA [[cite:&wood-2025-uma]].
+
+#+begin_src jupyter-python
+print('Hello world')
+#+end_src
+
+
+bibliographystyle:unsrtnat
+bibliography:citations.bib
+
+
+* export                                                           :noexport:
+
+You have to use the org-ref preprocessor for this
+
+#+BEGIN_SRC emacs-lisp :results silent
+(let ((org-export-with-broken-links t)
+      (org-export-before-parsing-hook '(org-ref-cite-natmove ;; do this first
+					org-ref-csl-preprocess-buffer)))
+  (ox-ipynb-export-to-ipynb-file-and-open))
+#+END_SRC

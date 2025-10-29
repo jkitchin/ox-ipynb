@@ -1,0 +1,17 @@
+#+TITLE: Citations with org-cite
+#+AUTHOR: ox-ipynb examples
+#+DESCRIPTION: Demonstrates org-cite citations and bibliography export
+
+#+bibliography: citations.bib
+
+* Example Citation
+
+A citation about UMA [cite:@wood-2025-uma].
+
+#+BEGIN_SRC jupyter-python
+print('Hello world')
+#+END_SRC
+
+
+
+#+PRINT_BIBLIOGRAPHY:

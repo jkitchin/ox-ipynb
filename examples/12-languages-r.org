@@ -1,0 +1,107 @@
+#+TITLE: R Language Support
+#+AUTHOR: ox-ipynb examples
+#+DESCRIPTION: Demonstrates R code blocks in Jupyter notebooks
+
+* Basic R Code
+
+** Simple Calculations
+
+#+BEGIN_SRC R
+# Basic arithmetic
+x <- 5
+y <- 10
+result <- x + y
+print(paste("Sum:", result))
+#+END_SRC
+
+** Vectors and Data
+
+#+BEGIN_SRC R
+# Create a vector
+numbers <- c(2, 4, 6, 8, 10)
+print(paste("Mean:", mean(numbers)))
+print(paste("Median:", median(numbers)))
+print(paste("Standard Deviation:", sd(numbers)))
+#+END_SRC
+
+* Data Frames
+
+** Creating and Manipulating Data Frames
+
+#+BEGIN_SRC R
+# Create a data frame
+students <- data.frame(
+  Name = c("Alice", "Bob", "Charlie", "Diana"),
+  Age = c(20, 21, 19, 22),
+  Grade = c(85, 92, 78, 95)
+)
+
+print(students)
+print(paste("Average Grade:", mean(students$Grade)))
+#+END_SRC
+
+** Summary Statistics
+
+#+BEGIN_SRC R
+# Summary statistics
+summary(students)
+#+END_SRC
+
+* Plotting with R
+
+** Basic Plot
+
+#+BEGIN_SRC R
+# Create a simple plot
+x <- seq(0, 2*pi, length.out=100)
+y <- sin(x)
+
+plot(x, y, type='l', col='blue', lwd=2,
+     main='Sine Wave',
+     xlab='x',
+     ylab='sin(x)')
+grid()
+#+END_SRC
+
+** Scatter Plot
+
+#+BEGIN_SRC R
+# Scatter plot with built-in dataset
+data(mtcars)
+plot(mtcars$wt, mtcars$mpg,
+     main='Car Weight vs MPG',
+     xlab='Weight (1000 lbs)',
+     ylab='Miles Per Gallon',
+     pch=19, col='darkblue')
+#+END_SRC
+
+* Statistical Analysis
+
+** Linear Regression
+
+#+BEGIN_SRC R
+# Simple linear regression
+model <- lm(mpg ~ wt, data=mtcars)
+summary(model)
+
+# Plot with regression line
+plot(mtcars$wt, mtcars$mpg,
+     main='Linear Regression',
+     xlab='Weight', ylab='MPG',
+     pch=19)
+abline(model, col='red', lwd=2)
+#+END_SRC
+
+* Notes
+
+To use R in Jupyter notebooks, you need:
+1. R installed on your system
+2. The IRkernel package installed in R
+3. IRkernel registered with Jupyter
+
+Install with:
+: install.packages('IRkernel')
+: IRkernel::installspec()
+
+When exporting this org file, ox-ipynb will create an R notebook
+that uses the R kernel instead of Python.

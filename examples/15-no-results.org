@@ -1,0 +1,157 @@
+#+TITLE: No Results Notebook Example
+#+AUTHOR: ox-ipynb examples
+#+DESCRIPTION: Demonstrates exporting notebooks with results stripped out
+
+* Introduction
+
+This example demonstrates how to export a notebook with all execution results
+removed. This is useful for:
+- Sharing clean notebook templates
+- Version control (avoiding large result diffs)
+- Creating starting points for exercises
+
+* Code with Results
+
+This code will have results when executed, but they'll be stripped in the export.
+
+#+BEGIN_SRC jupyter-python :results output
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Generate some data
+x = np.linspace(0, 2*np.pi, 100)
+y = np.sin(x)
+
+# Print some values
+print("First 5 x values:", x[:5])
+print("First 5 y values:", y[:5])
+print("Mean of y:", np.mean(y))
+#+END_SRC
+
+#+RESULTS:
+: First 5 x values: [0.         0.06346652 0.12693304 0.19039955 0.25386607]
+: First 5 y values: [0.         0.06342392 0.12659245 0.18925124 0.25114799]
+: Mean of y: -2.2433308041547524e-17
+
+* Plotting Example
+
+#+BEGIN_SRC jupyter-python :results output file
+# Create a plot
+plt.figure(figsize=(10, 6))
+plt.plot(x, y, 'b-', linewidth=2, label='sin(x)')
+plt.plot(x, np.cos(x), 'r--', linewidth=2, label='cos(x)')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title('Trigonometric Functions')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.savefig('trig_plot.png', dpi=150, bbox_inches='tight')
+print("Plot saved!")
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+[[file:trig_plot.png]]
+: Plot saved!
+[[file:./.ob-jupyter/6509122ef82bbb65a5b5ee44576eae6384b33655.png]]
+:END:
+
+* DataFrame Operations
+
+#+BEGIN_SRC jupyter-python :results output
+import pandas as pd
+
+# Create a DataFrame
+data = {
+    'Name': ['Alice', 'Bob', 'Charlie', 'David'],
+    'Score': [95, 87, 92, 88],
+    'Grade': ['A', 'B', 'A', 'B']
+}
+df = pd.DataFrame(data)
+
+print("DataFrame:")
+print(df)
+print("\nSummary Statistics:")
+print(df['Score'].describe())
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+DataFrame:
+      Name  Score Grade
+0    Alice     95     A
+1      Bob     87     B
+2  Charlie     92     A
+3    David     88     B
+
+Summary Statistics:
+count     4.000000
+mean     90.500000
+std       3.696846
+min      87.000000
+25%      87.750000
+50%      90.000000
+75%      92.750000
+max      95.000000
+Name: Score, dtype: float64
+#+end_example
+
+* Rich Output Example
+
+#+BEGIN_SRC jupyter-python :results output
+from IPython.display import HTML, display
+
+# Create some HTML output
+html_content = """
+<div style="background-color: #f0f0f0; padding: 20px; border-radius: 10px;">
+    <h2 style="color: #333;">Rich Output Demo</h2>
+    <p>This is <strong>formatted HTML</strong> output that will be removed.</p>
+    <ul>
+        <li>Item 1</li>
+        <li>Item 2</li>
+        <li>Item 3</li>
+    </ul>
+</div>
+"""
+display(HTML(html_content))
+print("HTML displayed above!")
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+** Rich Output Demo
+:PROPERTIES:
+:CUSTOM_ID: rich-output-demo
+:style: color: #333;
+:END:
+This is *formatted HTML* output that will be removed.
+
+- Item 1
+- Item 2
+- Item 3
+: HTML displayed above!
+:END:
+
+
+* Summary
+
+All the results above (text output, plots, DataFrames, HTML) will be stripped
+when exporting with the no-results option. The code cells remain intact, ready
+to be executed fresh.
+
+** Use Cases
+
+- *Templates*: Share notebooks as starting points
+- *Version Control*: Keep diffs clean and focused on code
+- *Exercises*: Provide code that students need to run
+- *Collaboration*: Share notebooks without stale results
+
+* Export Instructions                                            :noexport:
+
+To create a notebook with no results, use:
+=M-x ox-ipynb-export-to-ipynb-no-results-file-and-open=
+
+Or programmatically:
+#+BEGIN_SRC emacs-lisp :results silent
+(ox-ipynb-export-to-ipynb-no-results-file-and-open)
+#+END_SRC
