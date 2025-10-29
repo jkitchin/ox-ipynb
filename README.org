@@ -1,34 +1,599 @@
-#+TITLE: ox-ipynb --- Convert an org-file to an ipynb
+#+TITLE: ox-ipynb --- Export Org-mode files to Jupyter Notebooks
+#+AUTHOR: John Kitchin
+#+OPTIONS: toc:t
 
+* Overview
 
-This module allows you to export an org-file to an Ipython notebook. Python and R notebooks are currently supported. It is not currently possible to mix these languages.
+=ox-ipynb= is an Org-mode exporter that converts org-mode files to Jupyter notebooks (=.ipynb= format). It provides a seamless workflow for authoring computational notebooks in Org-mode while maintaining compatibility with the Jupyter ecosystem.
 
-* About this module
+Jupyter notebooks consist of two basic cell types: *markdown* cells (for text, math, images) and *code* cells (for executable code with results). This exporter intelligently parses org-mode content into these cell types, preserving formatting, structure, and executable code blocks.
 
-The Jupyter/Ipython notebooks are ultimately just json files. This module parses an org-file, and creates json files that represent them. The parsing is rudimentary. Jupyter notebooks only have two basic cells: text and code. This module tries to parse the org-file into those two kinds of cells.
+*Key Features:*
+- Multiple language kernels: Python, R, Julia, Clojure
+- Rich markdown export: LaTeX math, tables, images, links
+- Table of contents generation
+- Citations (org-cite and org-ref)
+- Slideshow support (RISE)
+- Cell and notebook metadata control
+- Participant notebooks (strips solutions/hidden content)
+- Export variations (with/without results)
 
-See this example org-file: [[./example.org]] and the corresponding ipynb: [[./example.ipynb]].
+* Installation
+
+** Requirements
+- Emacs 30+
+- Org-mode 9.7+
+- Jupyter (for viewing/running notebooks)
+
+** Basic Setup
+
+1. Clone or download this repository
+2. Add to your Emacs configuration:
 
 #+BEGIN_SRC emacs-lisp
+(add-to-list 'load-path "/path/to/ox-ipynb")
 (require 'ox-ipynb)
 #+END_SRC
 
-This will install a new export menu titled "Export to jupyter notebook" with the sub-options to export to a buffer, to a file, to a file and open, and to slides and open.
+3. The export menu will be available in any org-mode buffer via =C-c C-e n=
 
-** Slideshows
+* Quick Start
 
-See [[./ipynb-slideshow.org]] to see how to make a slideshow out an org-file.
+** Basic Export Workflow
 
-** Adding a new language
+1. Create an org-mode file with code blocks:
 
-It is probably possible to add new languages  by adding to the variables =ox-ipynb-kernelspecs= and =ox-ipynb-language-infos=. These were reverse-engineered to make the json metadata. I do not know what the minimal setup for this is required and suggest adapting these variables by example.
+#+BEGIN_EXAMPLE
+#+TITLE: My First Notebook
+#+AUTHOR: Your Name
 
-** Adding scientific references
+* Introduction
 
-You can use [[https://github.com/jkitchin/org-ref][org-ref]] to add scientific references. To make it work, you should set this variable.
+This is a markdown cell.
 
-#+BEGIN_SRC emacs-lisp
-(setq ox-ipynb-preprocess-hook '((lambda () (org-ref-csl-preprocess-buffer 'html))))
+#+BEGIN_SRC jupyter-python
+print("Hello, Jupyter!")
+#+END_SRC
+#+END_EXAMPLE
+
+2. Export using =C-c C-e n o= (export to notebook and open)
+
+** Export Options
+
+The export menu (=C-c C-e n=) provides several options:
+
+| Key | Command                            | Description                                   |
+|-----+------------------------------------+-----------------------------------------------|
+| b   | Export to buffer                   | View JSON in Emacs buffer                     |
+| n   | Export to notebook                 | Save as .ipynb file                           |
+| o   | Export to notebook and open        | Save and open in Jupyter                      |
+| p   | Export to participant notebook     | Remove solutions and hidden content           |
+| r   | Export without results and open    | Strip all code results before export          |
+| s   | Export to slides and open          | Convert to RISE slideshow                     |
+
+* Supported Languages
+
+=ox-ipynb= supports multiple Jupyter kernels. Specify the language in your code blocks:
+
+** Python
+
+#+BEGIN_EXAMPLE
+#+BEGIN_SRC jupyter-python
+import numpy as np
+print(np.array([1, 2, 3]))
+#+END_SRC
+#+END_EXAMPLE
+
+Or use =ipython= as the language name (legacy support).
+
+** R
+
+#+BEGIN_EXAMPLE
+#+BEGIN_SRC R
+library(ggplot2)
+summary(iris)
+#+END_SRC
+#+END_EXAMPLE
+
+Requirements: R, IRkernel package, and R kernel registered with Jupyter.
+
+** Julia
+
+#+BEGIN_EXAMPLE
+#+BEGIN_SRC jupyter-julia
+using Statistics
+mean([1, 2, 3, 4, 5])
+#+END_SRC
+#+END_EXAMPLE
+
+** Clojure
+
+#+BEGIN_EXAMPLE
+#+BEGIN_SRC jupyter-clojure
+(map inc [1 2 3 4 5])
+#+END_SRC
+#+END_EXAMPLE
+
+Requirements: Clojupyter kernel installed.
+
+** Specifying Language Explicitly
+
+If the first code block doesn't match your notebook language, use:
+
+#+BEGIN_EXAMPLE
+#+OX-IPYNB-LANGUAGE: jupyter-python
+#+END_EXAMPLE
+
+** Adding New Languages
+
+To add support for new languages, extend =ox-ipynb-kernelspecs= and =ox-ipynb-language-infos= variables. See the existing definitions in =ox-ipynb.el= as examples.
+
+* Core Features
+
+** Code Blocks and Results
+
+Code blocks are exported as code cells. Results are automatically included:
+
+#+BEGIN_EXAMPLE
+#+BEGIN_SRC jupyter-python
+x = [1, 2, 3, 4, 5]
+sum(x)
 #+END_SRC
 
-Then the citations and bibliography will be replaced by CSL rendered citations.
+#+RESULTS:
+: 15
+#+END_EXAMPLE
+
+*** Controlling Export with =:exports= parameter
+
+#+BEGIN_EXAMPLE
+#+BEGIN_SRC jupyter-python :exports none
+# This block won't appear in the notebook
+secret_config = "hidden"
+#+END_SRC
+
+#+BEGIN_SRC jupyter-python :exports both
+# This block shows code and results (default)
+print("Visible output")
+#+END_SRC
+#+END_EXAMPLE
+
+Options: =code=, =results=, =both= (default), =none=
+
+** Tables
+
+Org-mode tables export as markdown tables:
+
+#+BEGIN_EXAMPLE
+| Name    | Score | Grade |
+|---------+-------+-------|
+| Alice   |    92 | A     |
+| Bob     |    85 | B     |
+| Charlie |    78 | C     |
+#+END_EXAMPLE
+
+Tables with headers and complex formatting are preserved correctly. Recent improvements (Issue #23) ensure proper markdown table structure.
+
+** Mathematics (LaTeX)
+
+Inline math and display equations are supported:
+
+#+BEGIN_EXAMPLE
+The equation $E = mc^2$ is Einstein's mass-energy equivalence.
+
+The integral is:
+$$\int_{0}^{\infty} e^{-x^2} dx = \frac{\sqrt{\pi}}{2}$$
+#+END_EXAMPLE
+
+Special handling prevents dollar signs in tables from being interpreted as math (Issue #81387fd).
+
+** Images and Links
+
+*** External Links
+
+#+BEGIN_EXAMPLE
+Visit [[https://jupyter.org][Jupyter Project]] for more information.
+#+END_EXAMPLE
+
+*** Internal Links
+
+Cross-references between sections work:
+
+#+BEGIN_EXAMPLE
+See [[*Introduction][the introduction section]] for background.
+#+END_EXAMPLE
+
+*** Images
+
+#+BEGIN_EXAMPLE
+[[file:plot.png]]
+#+END_EXAMPLE
+
+Images are embedded as base64-encoded data for portability. Matplotlib plots generated in code cells are automatically captured.
+
+** Table of Contents
+
+Enable automatic TOC generation:
+
+#+BEGIN_EXAMPLE
+#+OPTIONS: toc:t
+#+END_EXAMPLE
+
+Control depth:
+
+#+BEGIN_EXAMPLE
+#+OPTIONS: toc:2
+#+END_EXAMPLE
+
+The TOC is inserted as a markdown cell with clickable navigation links.
+
+** Citations and Bibliography
+
+=ox-ipynb= supports two citation systems:
+
+*** org-cite (Recommended)
+
+Modern Org 9.5+ citation system:
+
+#+BEGIN_EXAMPLE
+#+BIBLIOGRAPHY: references.bib
+
+According to [cite:@smith2020], the results show...
+
+#+PRINT_BIBLIOGRAPHY:
+#+END_EXAMPLE
+
+Citations are formatted as "(Author et al. YEAR)" and the bibliography is generated automatically.
+
+*** org-ref
+
+Traditional org-ref package:
+
+#+BEGIN_EXAMPLE
+bibliography:references.bib
+
+According to cite:smith2020, the results show...
+#+END_EXAMPLE
+
+Configuration required:
+
+#+BEGIN_SRC emacs-lisp
+(setq ox-ipynb-preprocess-hook
+      '((lambda () (org-ref-csl-preprocess-buffer 'html))))
+#+END_SRC
+
+See [[file:examples/07-citations-org-cite.org][examples/07-citations-org-cite.org]] and [[file:examples/08-citations-org-ref.org][examples/08-citations-org-ref.org]].
+
+* Advanced Features
+
+** Cell Metadata
+
+Add metadata to individual cells using =#+attr_ipynb:=:
+
+#+BEGIN_EXAMPLE
+#+attr_ipynb: :tags ["important" "review"]
+#+BEGIN_SRC jupyter-python
+result = compute_critical_value()
+#+END_SRC
+#+END_EXAMPLE
+
+This is preserved in the notebook JSON and can be used by Jupyter extensions.
+
+** Notebook-Level Metadata
+
+Add custom metadata to the entire notebook:
+
+#+BEGIN_EXAMPLE
+#+OX-IPYNB-NOTEBOOK-METADATA: (rise . ((autolaunch . t) (scroll . t)))
+#+END_EXAMPLE
+
+Useful for slideshow settings (RISE), execution control, and extensions.
+
+** Keyword Metadata
+
+Export specific org-mode keywords to notebook metadata:
+
+#+BEGIN_EXAMPLE
+#+OX-IPYNB-KEYWORD-METADATA: AUTHOR DATE DESCRIPTION
+#+TITLE: My Notebook
+#+AUTHOR: John Doe
+#+DATE: 2025-01-15
+#+DESCRIPTION: Analysis of experimental data
+#+END_EXAMPLE
+
+These keywords are stored in the notebook metadata's =org= section.
+
+** Slideshows (RISE)
+
+Create presentations using Jupyter RISE extension:
+
+#+BEGIN_EXAMPLE
+#+OX-IPYNB-NOTEBOOK-METADATA: (rise . ((autolaunch . t)))
+
+* Title Slide
+#+attr_ipynb: (slideshow . ((slide_type . slide)))
+
+Introduction content
+
+* Main Point
+#+attr_ipynb: (slideshow . ((slide_type . slide)))
+
+Main content
+
+** Details
+#+attr_ipynb: (slideshow . ((slide_type . subslide)))
+
+Additional details
+#+END_EXAMPLE
+
+Slide types: =slide=, =subslide=, =fragment=, =skip=, =notes=
+
+Helper function: =M-x ox-ipynb-insert-slide= inserts the attribute line interactively.
+
+** Participant Notebooks
+
+Create student/participant versions by automatically removing solutions and instructor notes:
+
+#+BEGIN_EXAMPLE
+#+BEGIN_SRC jupyter-python
+def calculate_mean(data):
+    ### BEGIN SOLUTION
+    return sum(data) / len(data)
+    ### END SOLUTION
+    pass  # Student implements here
+#+END_SRC
+#+END_EXAMPLE
+
+Export with =C-c C-e n p= to strip:
+- =### BEGIN SOLUTION ... ### END SOLUTION= regions
+- =### BEGIN HIDDEN ... ### END HIDDEN= regions
+- Elements marked with =#+attr_ipynb: :remove t=
+
+** Export Without Results
+
+Create clean notebooks without cluttering output:
+
+Export with =C-c C-e n r= to remove all =#+RESULTS:= blocks before export. Useful for:
+- Sharing notebooks for others to run fresh
+- Version control (cleaner diffs)
+- Reducing file size
+
+** Export Tags
+
+Control what content is exported:
+
+*** Exclude Tags
+
+#+BEGIN_EXAMPLE
+#+EXCLUDE_TAGS: noexport private
+
+* Public Section
+This will be exported.
+
+* Private Notes                                                   :private:
+This section won't appear in the notebook.
+#+END_EXAMPLE
+
+*** Select Tags
+
+#+BEGIN_EXAMPLE
+#+SELECT_TAGS: publish
+
+* Draft Section
+Not exported (no tag).
+
+* Published Analysis                                             :publish:
+This will be exported.
+#+END_EXAMPLE
+
+** Broken Links Handling
+
+The exporter handles broken or special links gracefully:
+
+#+BEGIN_EXAMPLE
+#+OPTIONS: broken-links:mark
+#+END_EXAMPLE
+
+Options: =nil= (error), =t= (ignore), =mark= (mark as broken)
+
+Particularly useful when using citation links or other special link types.
+
+** Noweb Expansion
+
+Org-babel noweb references are expanded during export:
+
+#+BEGIN_EXAMPLE
+#+BEGIN_SRC jupyter-python :noweb yes
+<<setup>>
+<<analysis>>
+<<visualization>>
+#+END_SRC
+#+END_EXAMPLE
+
+* Configuration
+
+** Preprocessing Hooks
+
+Customize export behavior with hooks:
+
+#+BEGIN_SRC emacs-lisp
+(setq ox-ipynb-preprocess-hook
+      '(my-custom-processing-function))
+#+END_SRC
+
+Common uses:
+- Citation processing (org-ref-csl-preprocess-buffer)
+- Custom transformations
+- Cleanup operations
+
+Built-in preprocessing functions:
+- =ox-ipynb-preprocess-ignore= - Remove =:ignore:= tagged headings
+- =ox-ipynb-preprocess-babel-calls= - Remove babel calls
+- =ox-ipynb-remove-solution= - Strip solution regions
+- =ox-ipynb-remove-hidden= - Strip hidden regions
+- =ox-ipynb-remove-remove= - Remove marked elements
+
+** Export File Name
+
+Control the output filename:
+
+*** Buffer-level
+
+#+BEGIN_EXAMPLE
+#+EXPORT_FILE_NAME: my-notebook.ipynb
+#+END_EXAMPLE
+
+*** Subtree-level
+
+Use property drawers:
+
+#+BEGIN_EXAMPLE
+* My Section
+:PROPERTIES:
+:EXPORT_FILE_NAME: section-notebook.ipynb
+:END:
+#+END_EXAMPLE
+
+*** Programmatic
+
+#+BEGIN_SRC emacs-lisp
+(let ((export-file-name "custom-name.ipynb"))
+  (ox-ipynb-export-to-ipynb-file))
+#+END_SRC
+
+** Publishing
+
+Integrate with org-publish:
+
+#+BEGIN_SRC emacs-lisp
+(setq org-publish-project-alist
+      '(("notebooks"
+         :base-directory "~/org/notebooks/"
+         :publishing-directory "~/public/notebooks/"
+         :publishing-function ox-ipynb-publish-to-notebook)))
+#+END_SRC
+
+* Examples
+
+The [[file:examples/][examples/]] directory contains comprehensive demonstrations:
+
+| Example                                   | Feature                         |
+|-------------------------------------------+---------------------------------|
+| [[file:examples/01-basic.org][01-basic.org]]                              | Basic export workflow           |
+| [[file:examples/02-exclude-tags.org][02-exclude-tags.org]]                       | Tag-based filtering             |
+| [[file:examples/03-broken-links.org][03-broken-links.org]]                       | Link handling                   |
+| [[file:examples/04-tables.org][04-tables.org]]                             | Table export                    |
+| [[file:examples/05-latex-math.org][05-latex-math.org]]                         | Mathematical expressions        |
+| [[file:examples/06-links-images.org][06-links-images.org]]                       | Links and images                |
+| [[file:examples/07-citations-org-cite.org][07-citations-org-cite.org]]                 | Citations (org-cite)            |
+| [[file:examples/08-citations-org-ref.org][08-citations-org-ref.org]]                  | Citations (org-ref)             |
+| [[file:examples/09-toc-export.org][09-toc-export.org]]                         | Table of contents               |
+| [[file:examples/10-metadata-cells.org][10-metadata-cells.org]]                     | Cell metadata                   |
+| [[file:examples/11-slideshow.org][11-slideshow.org]]                          | RISE slideshows                 |
+| [[file:examples/12-languages-r.org][12-languages-r.org]]                        | R language support              |
+| [[file:examples/13-noweb.org][13-noweb.org]]                              | Noweb expansion                 |
+| [[file:examples/14-participant.org][14-participant.org]]                        | Participant notebooks           |
+| [[file:examples/15-no-results.org][15-no-results.org]]                         | Export without results          |
+| [[file:examples/16-custom-notebook-metadata.org][16-custom-notebook-metadata.org]]           | Notebook metadata               |
+| [[file:examples/17-diagram-exports-results.org][17-diagram-exports-results.org]]            | Diagram exports                 |
+
+See [[file:examples/README.org][examples/README.org]] for detailed documentation.
+
+* Programmatic Usage
+
+** Batch Export
+
+Export multiple org files:
+
+#+BEGIN_SRC emacs-lisp
+(ox-ipynb-export-org-file-to-ipynb-file "notebook.org")
+#+END_SRC
+
+Works in Dired: mark files and run =M-x ox-ipynb-export-org-file-to-ipynb-file=
+
+** From Elisp
+
+#+BEGIN_SRC emacs-lisp
+;; Export to buffer
+(ox-ipynb-export-to-ipynb-buffer)
+
+;; Export to file
+(ox-ipynb-export-to-ipynb-file)
+
+;; Export and open
+(ox-ipynb-export-to-ipynb-file-and-open)
+
+;; Export subtree
+(ox-ipynb-export-to-ipynb-file nil t)
+#+END_SRC
+
+* Troubleshooting
+
+** Common Issues
+
+*** Export menu not visible
+Ensure =ox-ipynb= is loaded: =(require 'ox-ipynb)=
+
+*** Language not recognized
+Add language to =ox-ipynb-kernelspecs= and =ox-ipynb-language-infos=. A warning message will indicate missing languages.
+
+*** Images not displaying
+- Check file paths (relative paths work best)
+- Ensure images exist before export
+- Matplotlib plots should use =plt.show()=
+
+*** Math not rendering
+- Jupyter requires MathJax (usually included)
+- Use =$...$= for inline, =$$...$$= for display math
+- Avoid dollar signs in non-math contexts
+
+*** Citations not working
+- org-cite: Requires =oc.el= and bibliography file accessible
+- org-ref: Requires preprocessing hook configuration
+- Check =.bib= file paths are correct
+
+** Debugging
+
+Enable verbose output:
+
+#+BEGIN_SRC emacs-lisp
+(setq org-export-with-broken-links 'mark)
+#+END_SRC
+
+Check the =*Messages*= buffer for warnings and errors.
+
+* Recent Changes
+
+Recent improvements (see git log for details):
+
+- *2025*: Support for =:exports= parameter in source blocks
+- *2025*: Fixed table export (removed extra horizontal rules)
+- *2025*: Custom notebook-level metadata support
+- *2025*: Clojure/Clojupyter language support
+- *2025*: Warning when language not in kernelspecs
+- *2025*: Comprehensive example suite added
+- *2025*: Metadata preservation through intermediate export
+- *2025*: TOC duplication fixes
+- *2025*: Removed s.el and dash.el dependencies
+
+See commit history for complete changelog.
+
+* Contributing
+
+Contributions welcome! Please:
+
+1. Add tests/examples for new features
+2. Update this README
+3. Follow existing code style
+4. Submit pull requests to [[https://github.com/jkitchin/ox-ipynb]]
+
+* License
+
+GPL v2 or later. See source file for details.
+
+* Links
+
+- Repository: https://github.com/jkitchin/ox-ipynb
+- Jupyter: https://jupyter.org
+- Org-mode: https://orgmode.org
+- John Kitchin's Blog: https://kitchingroup.cheme.cmu.edu
