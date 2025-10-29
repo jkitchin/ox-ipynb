@@ -19,9 +19,20 @@ bibliography:citations.bib
 
 You have to use the org-ref preprocessor for this
 
+** v1
+
 #+BEGIN_SRC emacs-lisp :results silent
 (let ((org-export-with-broken-links t)
       (org-export-before-parsing-hook '(org-ref-cite-natmove ;; do this first
 					org-ref-csl-preprocess-buffer)))
   (ox-ipynb-export-to-ipynb-file-and-open))
+#+END_SRC
+
+** v2
+
+#+BEGIN_SRC emacs-lisp :results silent
+(let ((org-export-with-broken-links t)
+      (org-export-before-parsing-hook '(org-ref-cite-natmove ;; do this first
+					org-ref-csl-preprocess-buffer)))
+  (ox-ipynb-v2-export-to-file-and-open))
 #+END_SRC
