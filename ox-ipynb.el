@@ -469,17 +469,32 @@ Captured from buffer settings or org-export-with-broken-links variable.")
 		       ((symbol-function 'org-html-table-row) 'ox-ipynb--export-table-row)
 		       ((symbol-function 'org-html-table)
 			(lambda (_ contents info)
-			  "We need to adapt the contents to remove leading and trailing rule lines."
+			  "We need to adapt the contents to remove leading and trailing rule lines.
+Also removes extra horizontal rules - markdown tables only support one rule after the header."
 
 			  ;; There are leading and trailing \n. strip off for the next step.
 			  (setq contents (string-trim contents))
 
-			  (let ((lines (split-string contents "\n")))
+			  (let ((lines (split-string contents "\n"))
+				(found-first-rule nil))
+			    ;; Remove leading rule
 			    (when (string-prefix-p "|-" (nth 0 lines))
 			      (setq lines (cdr lines)))
 
+			    ;; Remove trailing rule
 			    (when (string-prefix-p "|-" (car (last lines)))
 			      (setq lines (butlast lines)))
+
+			    ;; Keep only the first rule line, remove all subsequent ones
+			    (setq lines
+				  (cl-loop for line in lines
+					   unless (and (string-prefix-p "|---" line)
+						       found-first-rule)
+					   ;; Keep non-rule lines and the first rule
+					   collect line
+					   when (string-prefix-p "|---" line)
+					   ;; Mark that we've seen a rule
+					   do (setq found-first-rule t)))
 
 			    ;; Now add back the blank lines
 			    (setq contents (string-join (append '("") lines '(""))  "\n")))
